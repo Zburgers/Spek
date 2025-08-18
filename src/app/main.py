@@ -1,7 +1,10 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, RedirectResponse
 
 from .admin.initialize import create_admin_interface
 from .api import router
@@ -28,6 +31,25 @@ async def lifespan_with_admin(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = create_application(router=router, settings=settings, lifespan=lifespan_with_admin)
+
+# Mount static files
+static_dir = Path("/code/static")  # Use absolute path in container
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+# Redirect root to /index.html (canonical landing page)
+@app.get("/")
+async def redirect_to_index():
+    return RedirectResponse(url="/index.html", status_code=307)
+
+
+# Serve index.html at /index.html
+@app.get("/index.html")
+async def serve_index():
+    index_file = static_dir / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return {"message": "Welcome to Spek API. Frontend not found."}
 
 # Mount admin interface if enabled
 if admin:
