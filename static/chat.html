@@ -10,10 +10,9 @@
 </head>
 <body>
     <div class="chat-container">
-        <!-- Header -->
         <header class="chat-header">
             <div class="header-left">
-                <a href="/static/index.html" class="back-btn">
+                <a href="/" class="back-btn">
                     <i class="fas fa-arrow-left"></i>
                 </a>
                 <div class="chat-info">
@@ -22,16 +21,12 @@
                 </div>
             </div>
             <div class="header-right">
-                <button class="header-btn" id="settingsBtn" title="Settings">
-                    <i class="fas fa-cog"></i>
-                </button>
-                <button class="header-btn" id="accountBtn" title="Account">
-                    <i class="fas fa-user"></i>
+                <button class="header-btn" id="logout-btn" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
                 </button>
             </div>
         </header>
 
-        <!-- Chat Messages Area -->
         <div class="chat-messages" id="chatMessages">
             <div class="message ai-message">
                 <div class="message-avatar">
@@ -39,156 +34,30 @@
                 </div>
                 <div class="message-content">
                     <div class="message-text">
-                        Hello! I'm Spek, your AI conversation assistant. I can help you with text chat, voice interactions, and document analysis. What would you like to explore today?
+                        Hello! I'm Spek, your AI conversation assistant. How can I help you today?
                     </div>
                     <div class="message-time">Just now</div>
                 </div>
             </div>
         </div>
 
-        <!-- Scroll to Bottom Button -->
-        <button class="scroll-bottom-btn" id="scrollBottomBtn" title="Scroll to bottom">
-            <i class="fas fa-chevron-down"></i>
-        </button>
-
-        <!-- Input Area -->
         <div class="chat-input-area">
-            <div class="input-container">
-                <div class="input-actions">
-                    <button class="action-btn" id="voiceBtn" title="Voice Message">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    <button class="action-btn" id="moreBtn" title="More Options">
-                        <i class="fas fa-ellipsis-h"></i>
-                    </button>
-                </div>
-                
+            <form id="chat-form" class="input-container">
                 <div class="text-input-container">
                     <textarea 
                         id="messageInput" 
                         placeholder="Type your message here..."
                         rows="1"
                     ></textarea>
-                    <button class="send-btn" id="sendBtn" title="Send Message">
+                    <button class="send-btn" id="sendBtn" title="Send Message" type="submit">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
-            </div>
-
-            <!-- More Options Menu -->
-            <div class="more-options" id="moreOptions">
-                <div class="option-item" id="uploadDocBtn">
-                    <i class="fas fa-file-upload"></i>
-                    <span>Upload Document</span>
-                </div>
-                <div class="option-item" id="mcpBtn">
-                    <i class="fas fa-plug"></i>
-                    <span>MCP Tools</span>
-                </div>
-                <div class="option-item" id="clearChatBtn">
-                    <i class="fas fa-trash"></i>
-                    <span>Clear Chat</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Voice Recording Overlay -->
-        <div class="voice-overlay" id="voiceOverlay">
-            <div class="voice-modal">
-                <div class="voice-icon">
-                    <i class="fas fa-microphone"></i>
-                </div>
-                <div class="voice-text">Recording...</div>
-                <div class="voice-waveform">
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                </div>
-                <button class="voice-stop-btn" id="stopRecordingBtn">
-                    <i class="fas fa-stop"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Document Upload Modal -->
-        <div class="modal-overlay" id="uploadModal">
-            <div class="modal">
-                <div class="modal-header">
-                    <h3>Upload Document</h3>
-                    <button class="modal-close" id="closeUploadModal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="upload-area" id="uploadArea">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <p>Drag and drop a file here, or click to browse</p>
-                        <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt" hidden>
-                    </div>
-                    <div class="file-info" id="fileInfo" style="display: none;">
-                        <div class="file-details">
-                            <i class="fas fa-file"></i>
-                            <span id="fileName"></span>
-                            <span id="fileSize"></span>
-                        </div>
-                        <button class="remove-file-btn" id="removeFileBtn">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" id="cancelUpload">Cancel</button>
-                    <button class="btn btn-primary" id="confirmUpload" disabled>Upload</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- MCP Tools Modal -->
-        <div class="modal-overlay" id="mcpModal">
-            <div class="modal">
-                <div class="modal-header">
-                    <h3>MCP Tools</h3>
-                    <button class="modal-close" id="closeMCPModal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="mcp-tools">
-                        <div class="tool-item">
-                            <i class="fas fa-code"></i>
-                            <div class="tool-info">
-                                <h4>Code Interpreter</h4>
-                                <p>Execute and debug code in various languages</p>
-                                <span class="status coming-soon">Coming Soon</span>
-                            </div>
-                        </div>
-                        <div class="tool-item">
-                            <i class="fas fa-database"></i>
-                            <div class="tool-info">
-                                <h4>Database Query</h4>
-                                <p>Query and analyze databases</p>
-                                <span class="status coming-soon">Coming Soon</span>
-                            </div>
-                        </div>
-                        <div class="tool-item">
-                            <i class="fas fa-globe"></i>
-                            <div class="tool-info">
-                                <h4>Web Search</h4>
-                                <p>Search the web for real-time information</p>
-                                <span class="status coming-soon">Coming Soon</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" id="closeMCP">Close</button>
-                </div>
-            </div>
+            </form>
         </div>
     </div>
 
+    <script src="/static/js/main.js"></script>
     <script src="/static/js/chat.js"></script>
 </body>
 </html>

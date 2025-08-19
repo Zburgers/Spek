@@ -4,593 +4,164 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spek - Multimodal AI Platform</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* Header */
-        .header {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 1rem 0;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            transition: opacity 0.3s;
-        }
-
-        .nav-links a:hover {
-            opacity: 0.8;
-        }
-
-        .auth-buttons {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.3s;
-            font-size: 0.9rem;
-        }
-
-        .btn-primary {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .btn-outline {
-            background: transparent;
-            color: white;
-            border: 1px solid white;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
-        /* Main Content */
-        .main-content {
-            margin-top: 80px;
-            padding: 2rem 0;
-        }
-
-        .hero {
-            text-align: center;
-            color: white;
-            padding: 4rem 0;
-        }
-
-        .hero h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            font-weight: 700;
-        }
-
-        .hero p {
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-            opacity: 0.9;
-        }
-
-        .features {
-            background: white;
-            margin: 2rem 0;
-            padding: 3rem 0;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-
-        .feature-card {
-            text-align: center;
-            padding: 2rem;
-            border-radius: 10px;
-            background: #f8f9fa;
-            transition: transform 0.3s;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .feature-card h3 {
-            margin-bottom: 1rem;
-            color: #333;
-        }
-
-        .feature-card p {
-            color: #666;
-        }
-
-        /* App Section */
-        .app-section {
-            background: white;
-            padding: 3rem 0;
-            border-radius: 10px;
-            margin: 2rem 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .app-container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .auth-form {
-            background: #f8f9fa;
-            padding: 2rem;
-            border-radius: 10px;
-            margin-bottom: 2rem;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
-        }
-
-        .chat-container {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 1rem;
-            height: 400px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-            background: white;
-            border-radius: 5px;
-            margin-bottom: 1rem;
-        }
-
-        .chat-input-container {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .message {
-            margin-bottom: 1rem;
-            padding: 1rem;
-            border-radius: 10px;
-        }
-
-        .message.user {
-            background: #667eea;
-            color: white;
-            margin-left: 20%;
-        }
-
-        .message.ai {
-            background: #e9ecef;
-            color: #333;
-            margin-right: 20%;
-        }
-
-        .alert {
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 5px;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2rem;
-            }
-            
-            .nav-links {
-                display: none;
-            }
-            
-            .auth-buttons {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <nav class="nav">
-                <a href="#/" class="logo" data-link>🧠 Spek</a>
-                <ul class="nav-links">
-                    <li><a href="#features">Features</a></li>
-                    <li><a href="#/chat" data-link>Try Now</a></li>
-                    <li><a href="#about">About</a></li>
-                </ul>
-                <div class="auth-buttons">
-                    <a href="#/login" class="btn btn-outline" data-link>Sign In</a>
-                    <a href="#/login?mode=register" class="btn btn-primary" data-link>Get Started</a>
-                </div>
-            </nav>
-        </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <!-- Hero Section -->
-            <section class="hero">
-                <h1>Next-Generation AI Conversations</h1>
-                <p>Experience the future of AI interaction with Spek's multimodal platform. Chat with text, voice, and documents seamlessly.</p>
-                <a href="#/chat" class="btn btn-primary" data-link>Start Chatting</a>
-            </section>
-
-            <!-- Features Section -->
-            <section id="features" class="features">
-                <div class="container">
-                    <h2 style="text-align: center; margin-bottom: 2rem;">Powerful Features</h2>
-                    <div class="features-grid">
-                        <div class="feature-card">
-                            <div class="feature-icon">💬</div>
-                            <h3>Text Chat</h3>
-                            <p>Engage in intelligent conversations with advanced AI models</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">🎙️</div>
-                            <h3>Voice Chat</h3>
-                            <p>Talk naturally with speech-to-text and text-to-speech capabilities</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">📄</div>
-                            <h3>Document Analysis</h3>
-                            <p>Upload and interact with your documents using AI</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- SPA App Shell -->
-            <div id="app"><!-- SPA views will render here --></div>
-        </div>
-    </main>
-
-    <script src="/static/js/router.js"></script>
-    <script src="/static/js/main.js"></script>
-</body>
-</html>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-number">99.9%</span>
-                        <span class="stat-label">Uptime</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-number">24/7</span>
-                        <span class="stat-label">Available</span>
-                    </div>
-                </div>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <i class="fas fa-brain"></i>
+                <span>Spek</span>
+            </a>
+            <div class="nav-menu">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#about" class="nav-link">About</a>
             </div>
-            <div class="hero-visual">
-                <div class="chat-mockup">
-                    <div class="chat-header">
-                        <div class="chat-controls">
-                            <span class="control red"></span>
-                            <span class="control yellow"></span>
-                            <span class="control green"></span>
-                        </div>
-                        <span class="chat-title">Spek AI Chat</span>
-                    </div>
-                    <div class="chat-content">
-                        <div class="message user-message">
-                            <div class="message-content">
-                                Can you help me analyze this document?
-                            </div>
-                        </div>
-                        <div class="message ai-message">
-                            <div class="message-avatar">
-                                <i class="fas fa-brain"></i>
-                            </div>
-                            <div class="message-content">
-                                Of course! I can analyze documents, images, and help with various tasks. 
-                                Feel free to upload your file and I'll provide insights.
-                            </div>
-                        </div>
-                        <div class="typing-indicator">
-                            <div class="typing-dots">
-                                <span></span><span></span><span></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="auth-buttons">
+                <!-- Auth buttons are dynamically inserted here by main.js -->
             </div>
+            <button class="nav-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
-    </section>
+    </nav>
 
-    <!-- Features Section -->
-    <section id="features" class="features">
-        <div class="container">
-            <div class="section-header">
-                <h2>Powerful AI Capabilities</h2>
-                <p>Everything you need for intelligent conversations and document analysis</p>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-comments"></i>
-                    </div>
-                    <h3>Text Chat</h3>
-                    <p>Advanced conversational AI with context awareness and memory across sessions</p>
-                    <div class="feature-demo">
-                        <span class="demo-tag">Live Demo</span>
-                    </div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-microphone"></i>
-                    </div>
-                    <h3>Voice Integration</h3>
-                    <p>Natural speech-to-text and text-to-speech with real-time voice conversations</p>
-                    <div class="feature-demo">
-                        <span class="demo-tag">Coming Soon</span>
-                    </div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-file-upload"></i>
-                    </div>
-                    <h3>Document Analysis</h3>
-                    <p>Upload and query documents with AI-powered insights and summarization</p>
-                    <div class="feature-demo">
-                        <span class="demo-tag">Beta</span>
-                    </div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-brain"></i>
-                    </div>
-                    <h3>Multiple AI Models</h3>
-                    <p>Choose from various AI models optimized for different tasks and use cases</p>
-                    <div class="feature-demo">
-                        <span class="demo-tag">Pro Feature</span>
-                    </div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <h3>Secure & Private</h3>
-                    <p>End-to-end encryption with privacy-first design and secure data handling</p>
-                    <div class="feature-demo">
-                        <span class="demo-tag">Enterprise</span>
-                    </div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <h3>Lightning Fast</h3>
-                    <p>Optimized performance with real-time responses and minimal latency</p>
-                    <div class="feature-demo">
-                        <span class="demo-tag">< 100ms</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- About Section -->
-    <section id="about" class="about">
-        <div class="container">
-            <div class="about-content">
-                <div class="about-text">
-                    <h2>Built for the Future</h2>
-                    <p>
-                        Spek represents the next evolution in AI interaction platforms. 
-                        Our multimodal approach combines the best of text, voice, and document 
-                        processing to create a seamless AI experience.
+    <main>
+        <section class="hero">
+            <div class="hero-container">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        Next-Generation <span class="gradient-text">AI Conversations</span>
+                    </h1>
+                    <p class="hero-description">
+                        Experience the future of AI interaction with Spek's multimodal platform. Chat with text, voice, and documents seamlessly.
                     </p>
-                    <div class="tech-stack">
-                        <h3>Powered by Modern Technology</h3>
-                        <div class="tech-grid">
-                            <div class="tech-item">
-                                <i class="fab fa-python"></i>
-                                <span>FastAPI</span>
+                    <div class="hero-actions">
+                        <a href="/login?mode=register" class="btn btn-primary btn-large">
+                            <i class="fas fa-user-plus"></i>
+                            Get Started
+                        </a>
+                        <a href="/login" class="btn btn-secondary btn-large">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Sign In
+                        </a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <span class="stat-number">10K+</span>
+                            <span class="stat-label">Users</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">99.9%</span>
+                            <span class="stat-label">Uptime</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">24/7</span>
+                            <span class="stat-label">Available</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="chat-mockup">
+                        <div class="chat-header">
+                            <div class="chat-controls">
+                                <span class="control red"></span>
+                                <span class="control yellow"></span>
+                                <span class="control green"></span>
                             </div>
-                            <div class="tech-item">
-                                <i class="fas fa-database"></i>
-                                <span>PostgreSQL</span>
+                            <span class="chat-title">Spek AI Chat</span>
+                        </div>
+                        <div class="chat-content">
+                            <div class="message user-message">
+                                <div class="message-content">
+                                    Can you help me analyze this document?
+                                </div>
                             </div>
-                            <div class="tech-item">
-                                <i class="fas fa-memory"></i>
-                                <span>Redis</span>
+                            <div class="message ai-message">
+                                <div class="message-avatar">
+                                    <i class="fas fa-brain"></i>
+                                </div>
+                                <div class="message-content">
+                                    Of course! I can analyze documents and help with various tasks.
+                                    Feel free to upload your file and I'll provide insights.
+                                </div>
                             </div>
-                            <div class="tech-item">
-                                <i class="fab fa-docker"></i>
-                                <span>Docker</span>
+                            <div class="typing-indicator">
+                                <div class="typing-dots">
+                                    <span></span><span></span><span></span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="about-stats">
-                    <div class="stat-card">
-                        <h3>99.9%</h3>
-                        <p>Uptime Guarantee</p>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Powerful AI Capabilities</h2>
+                    <p>Everything you need for intelligent conversations and document analysis</p>
+                </div>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <h3>Text Chat</h3>
+                        <p>Advanced conversational AI with context awareness and memory across sessions</p>
                     </div>
-                    <div class="stat-card">
-                        <h3>< 50ms</h3>
-                        <p>Average Response Time</p>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-microphone"></i>
+                        </div>
+                        <h3>Voice Integration</h3>
+                        <p>Natural speech-to-text and text-to-speech with real-time voice conversations</p>
                     </div>
-                    <div class="stat-card">
-                        <h3>24/7</h3>
-                        <p>Support Available</p>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-file-upload"></i>
+                        </div>
+                        <h3>Document Analysis</h3>
+                        <p>Upload and query documents with AI-powered insights and summarization</p>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- CTA Section -->
-    <section class="cta">
-        <div class="container">
-            <div class="cta-content">
-                <h2>Ready to Experience AI Like Never Before?</h2>
-                <p>Join thousands of users already using Spek for their AI conversations</p>
-                <div class="cta-actions">
-                    <a href="#/login?mode=register" class="btn btn-primary btn-large" data-link>
-                        <i class="fas fa-user-plus"></i>
-                        Create Free Account
-                    </a>
-                    <a href="#/login" class="btn btn-outline btn-large" data-link>
-                        <i class="fas fa-sign-in-alt"></i>
-                        Sign In
-                    </a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <div class="brand">
-                        <i class="fas fa-brain"></i>
-                        <span>Spek</span>
-                    </div>
-                    <p>Next-generation AI conversation platform</p>
-                </div>
-                <div class="footer-links">
-                    <div class="link-group">
-                        <h4>Product</h4>
-                        <a href="#features">Features</a>
-                        <a href="/api/docs">API Docs</a>
-                        <a href="#pricing">Pricing</a>
-                    </div>
-                    <div class="link-group">
-                        <h4>Company</h4>
-                        <a href="#about">About</a>
-                        <a href="#contact">Contact</a>
-                        <a href="#privacy">Privacy</a>
+        <section class="cta">
+            <div class="container">
+                <div class="cta-content">
+                    <h2>Ready to Experience AI Like Never Before?</h2>
+                    <p>Join thousands of users already using Spek for their AI conversations</p>
+                    <div class="cta-actions">
+                        <a href="/login?mode=register" class="btn btn-primary btn-large">
+                            <i class="fas fa-user-plus"></i>
+                            Create Free Account
+                        </a>
                     </div>
                 </div>
             </div>
-            <div class="footer-bottom">
-                <p>&copy; 2025 Spek. All rights reserved.</p>
-                <div class="footer-social">
-                    <a href="#"><i class="fab fa-twitter"></i></a>
-                    <a href="#"><i class="fab fa-github"></i></a>
-                    <a href="#"><i class="fab fa-linkedin"></i></a>
+        </section>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="footer-bottom">
+                    <p>&copy; 2025 Spek. All rights reserved.</p>
+                    <div class="footer-social">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-github"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                    </div>
                 </div>
             </div>
-        </div>
-    </footer>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay hidden">
-        <div class="loading-spinner">
-            <div class="spinner"></div>
-            <p>Loading...</p>
-        </div>
-    </div>
-
+        </footer>
+    </main>
+    
     <script src="/static/js/main.js"></script>
-    <script src="/static/js/router.js"></script>
 </body>
 </html>
