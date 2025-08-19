@@ -16,17 +16,17 @@ async def speech_to_text(
     db: AsyncSession = Depends(async_get_db),
 ) -> STTResponse:
     """Convert speech to text."""
-    
+
     # TODO: Implement actual STT processing
     # For now, return mock response
     # In production, this would use OpenAI Whisper, Google Speech-to-Text, or similar
-    
+
     try:
         # Mock STT processing
         text = "This is a mock transcription of your audio message."
         confidence = 0.95
         language = request.language
-        
+
         return STTResponse(
             text=text,
             confidence=confidence,
@@ -46,16 +46,16 @@ async def text_to_speech(
     db: AsyncSession = Depends(async_get_db),
 ) -> TTSResponse:
     """Convert text to speech."""
-    
+
     # TODO: Implement actual TTS processing
     # For now, return mock response
     # In production, this would use OpenAI TTS, Google Text-to-Speech, or similar
-    
+
     try:
         # Mock TTS processing
         audio_data = "mock_audio_data_base64_encoded"
         duration = len(request.text) * 0.1  # Rough estimate
-        
+
         return TTSResponse(
             audio_data=audio_data,
             duration=duration,

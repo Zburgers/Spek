@@ -12,7 +12,7 @@ router = APIRouter(tags=["system"])
 @router.get("/models", response_model=List[ModelInfo])
 async def get_available_models() -> List[ModelInfo]:
     """Get list of available AI models."""
-    
+
     # TODO: In production, this would query actual model availability
     # For now, return mock data
     models = [
@@ -52,14 +52,14 @@ async def get_available_models() -> List[ModelInfo]:
             is_available=False,  # Coming soon
         ),
     ]
-    
+
     return models
 
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
     """Health check endpoint."""
-    
+
     # TODO: In production, check actual service health
     # For now, return mock data
     services = {
@@ -69,7 +69,7 @@ async def health_check() -> HealthResponse:
         "document_storage": "healthy",
         "authentication": "healthy",
     }
-    
+
     return HealthResponse(
         status="healthy",
         timestamp=datetime.utcnow(),

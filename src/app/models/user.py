@@ -26,7 +26,7 @@ class User(Base):
     is_superuser: Mapped[bool] = mapped_column(default=False)
 
     tier_id: Mapped[int | None] = mapped_column(ForeignKey("tier.id"), index=True, default=None, init=False)
-    
+
     # Relationships
     chat_sessions: Mapped[list["ChatSession"]] = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan", init=False)
     documents: Mapped[list["Document"]] = relationship("Document", back_populates="user", cascade="all, delete-orphan", init=False)

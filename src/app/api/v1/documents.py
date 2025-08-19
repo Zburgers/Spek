@@ -1,7 +1,7 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import get_current_user
@@ -25,12 +25,12 @@ async def upload_document(
     db: AsyncSession = Depends(async_get_db),
 ) -> DocumentUploadResponse:
     """Upload a document for processing and querying."""
-    
+
     try:
         # Read file content
         content = await file.read()
         content_base64 = content.hex()  # Simple encoding for demo
-        
+
         # Create upload request
         upload_request = DocumentUploadRequest(
             file_name=file.filename,
@@ -38,10 +38,10 @@ async def upload_document(
             file_size=len(content),
             content=content_base64,
         )
-        
+
         # Save document to database
         db_document = await document.create(db, obj_in=upload_request, user_id=current_user.uuid)
-        
+
         return DocumentUploadResponse(
             document_id=str(db_document.uuid),
             file_name=db_document.file_name,
@@ -49,7 +49,7 @@ async def upload_document(
             status=db_document.status,
             uploaded_at=db_document.created_at,
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -64,14 +64,14 @@ async def get_document(
     db: AsyncSession = Depends(async_get_db),
 ):
     """Get document information and content."""
-    
+
     db_document = await document.get(db, doc_id)
     if not db_document or db_document.user_id != current_user.uuid:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
         )
-    
+
     return {
         "document_id": str(db_document.uuid),
         "file_name": db_document.file_name,
@@ -90,7 +90,7 @@ async def query_document(
     db: AsyncSession = Depends(async_get_db),
 ) -> DocumentQueryResponse:
     """Query a document with natural language questions."""
-    
+
     # Verify document exists and belongs to user
     db_document = await document.get(db, request.document_id)
     if not db_document or db_document.user_id != current_user.uuid:
@@ -98,23 +98,23 @@ async def query_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
         )
-    
+
     try:
         # TODO: Implement actual document querying with AI
         # This would use RAG (Retrieval-Augmented Generation) or similar
         # For now, return mock response
-        
+
         answer = f"This is a mock answer to your query: '{request.query}' about the document '{db_document.file_name}'."
         source_document = db_document.file_name
         confidence = 0.85
-        
+
         return DocumentQueryResponse(
             answer=answer,
             source_document=source_document,
             confidence=confidence,
             timestamp=db_document.created_at,
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -128,9 +128,9 @@ async def list_user_documents(
     db: AsyncSession = Depends(async_get_db),
 ) -> List[dict]:
     """List all documents for the current user."""
-    
+
     documents = await document.get_by_user(db, current_user.uuid)
-    
+
     return [
         {
             "document_id": str(doc.uuid),
