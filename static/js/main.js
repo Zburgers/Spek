@@ -6,23 +6,19 @@ class SpekApp {
         this.apiClient = new APIClient();
         this.router = new Router();
         this.notifications = new NotificationManager();
-        
+        window.spekApp = this; // Expose for router auth checks
         this.init();
     }
 
     async init() {
         // Check authentication status
         await this.checkAuthStatus();
-        
-        // Initialize router
+        // Initialize router (hash-based)
         this.router.init();
-        
         // Setup global event listeners
         this.setupEventListeners();
-        
         // Initialize components
         this.initializeComponents();
-        
         console.log('Spek App initialized');
     }
 
@@ -56,16 +52,54 @@ class SpekApp {
 
     updateUIForAuth() {
         // Update navigation and UI based on auth status
-        const authButtons = document.querySelectorAll('[data-auth-required]');
-        const publicButtons = document.querySelectorAll('[data-auth-public]');
+        const authButtons = document.querySelector('.auth-buttons');
         
-        authButtons.forEach(btn => {
-            btn.style.display = this.isAuthenticated ? 'block' : 'none';
+        if (authButtons) {
+            if (this.isAuthenticated) {
+                authButtons.innerHTML = `
+                    <a href="#/chat" class="btn btn-primary" data-link>Chat</a>
+                    <button id="nav-logout-btn" class="btn btn-outline">Logout</button>
+                `;
+                
+                // Add logout handler
+                const logoutBtn = document.getElementById('nav-logout-btn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', async () => {
+                        try {
+                            await this.apiClient.logout();
+                            this.clearAuth();
+                            this.notifications.success('Successfully logged out');
+                            this.router.navigateTo('#/');
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            this.clearAuth();
+                            this.router.navigateTo('#/');
+                        }
+                    });
+                }
+            } else {
+                authButtons.innerHTML = `
+                    <a href="#/login" class="btn btn-outline" data-link>Sign In</a>
+                    <a href="#/login?mode=register" class="btn btn-primary" data-link>Get Started</a>
+                `;
+            }
+        }
+        
+        // Update Try Now link
+        const tryNowLinks = document.querySelectorAll('a[href="#/chat"]');
+        tryNowLinks.forEach(link => {
+            if (!this.isAuthenticated) {
+                link.href = '#/login';
+                link.textContent = link.textContent.includes('Try') ? 'Try Now' : link.textContent;
+            } else {
+                link.href = '#/chat';
+            }
         });
         
-        publicButtons.forEach(btn => {
-            btn.style.display = this.isAuthenticated ? 'none' : 'block';
-        });
+        // Re-render current view if it's the home view to update content
+        if (this.router && this.router.currentRoute === '#/') {
+            this.router.loadView('home');
+        }
     }
 
     setupEventListeners() {
@@ -233,6 +267,7 @@ class APIClient {
         const url = `${this.baseURL}${endpoint}`;
         const config = {
             headers: { ...this.defaultHeaders },
+            credentials: 'include', // Include cookies for refresh token
             ...options
         };
 
@@ -252,6 +287,9 @@ class APIClient {
                     config.headers.Authorization = `Bearer ${localStorage.getItem('access_token')}`;
                     return fetch(url, config);
                 } else {
+                    // Refresh failed - clear auth and redirect to login
+                    window.spekApp?.clearAuth();
+                    window.spekApp?.router.navigateTo('#/login');
                     throw new Error('Authentication failed');
                 }
             }
@@ -261,8 +299,7 @@ class APIClient {
                 throw new Error(errorData.detail || `HTTP ${response.status}`);
             }
 
-            const data = await response.json();
-            return data;
+            return await response.json();
         } catch (error) {
             console.error('API request failed:', error);
             throw error;
@@ -280,133 +317,95 @@ class APIClient {
                 const data = await response.json();
                 localStorage.setItem('access_token', data.access_token);
                 return true;
+            } else {
+                return false;
             }
         } catch (error) {
             console.error('Token refresh failed:', error);
+            return false;
         }
-        
-        return false;
     }
 
-    // Auth endpoints
     async login(username, password) {
-        const formData = new FormData();
+        const formData = new URLSearchParams();
         formData.append('username', username);
         formData.append('password', password);
 
-        return this.request('/login', {
+        const response = await fetch('/api/v1/login', {
             method: 'POST',
-            headers: {}, // Let browser set content-type for FormData
-            body: formData
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
         });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'Login failed');
+        }
+
+        const tokens = await response.json();
+        localStorage.setItem('access_token', tokens.access_token);
+        return tokens;
     }
 
     async register(userData) {
-        return this.request('/user', {
+        const response = await fetch('/api/v1/user', {
             method: 'POST',
-            body: JSON.stringify(userData)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData),
+            credentials: 'include'
         });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            
+            let errorMessage = 'Registration failed';
+            
+            if (errorData.detail) {
+                if (Array.isArray(errorData.detail)) {
+                    // Handle validation errors (422)
+                    errorMessage = errorData.detail.map(err => err.msg).join(', ');
+                } else if (typeof errorData.detail === 'string') {
+                    // Handle simple string errors
+                    errorMessage = errorData.detail;
+                }
+            }
+            
+            throw new Error(errorMessage);
+        }
+
+        return await response.json();
     }
 
     async logout() {
-        return this.request('/logout', {
-            method: 'POST'
-        });
+        try {
+            await fetch('/api/v1/logout', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                }
+            });
+        } catch (error) {
+            console.error('Logout API call failed:', error);
+        } finally {
+            // Clear local storage regardless
+            localStorage.removeItem('access_token');
+        }
     }
 
     async getCurrentUser() {
-        return this.request('/users/user/me/');
+        return await this.request('/user/me/');
     }
 
-    // Chat endpoints
-    async sendTextMessage(message, sessionId = null, model = 'gpt-4') {
-        return this.request('/chat/text', {
+    // Chat API methods
+    async sendMessage(message) {
+        return await this.request('/chat/text', {
             method: 'POST',
-            body: JSON.stringify({
-                message,
-                session_id: sessionId,
-                model
-            })
+            body: JSON.stringify({ message })
         });
     }
 
-    async getChatHistory(sessionId) {
-        return this.request(`/chat/history/${sessionId}`);
-    }
-
-    async sendVoiceMessage(audioData, sessionId = null, model = 'gpt-4') {
-        return this.request('/chat/voice', {
-            method: 'POST',
-            body: JSON.stringify({
-                audio_data: audioData,
-                session_id: sessionId,
-                model
-            })
-        });
-    }
-
-    // Voice endpoints
-    async speechToText(audioData, language = 'en-US') {
-        return this.request('/stt', {
-            method: 'POST',
-            body: JSON.stringify({
-                audio_data: audioData,
-                language
-            })
-        });
-    }
-
-    async textToSpeech(text, voice = 'alloy', language = 'en-US') {
-        return this.request('/tts', {
-            method: 'POST',
-            body: JSON.stringify({
-                text,
-                voice,
-                language
-            })
-        });
-    }
-
-    // Document endpoints
-    async uploadDocument(fileName, fileType, fileSize, content) {
-        return this.request('/documents/upload', {
-            method: 'POST',
-            body: JSON.stringify({
-                file_name: fileName,
-                file_type: fileType,
-                file_size: fileSize,
-                content
-            })
-        });
-    }
-
-    async getDocuments() {
-        return this.request('/documents');
-    }
-
-    async getDocument(docId) {
-        return this.request(`/documents/${docId}`);
-    }
-
-    async queryDocument(documentId, query, sessionId = null) {
-        return this.request('/documents/query', {
-            method: 'POST',
-            body: JSON.stringify({
-                document_id: documentId,
-                query,
-                session_id: sessionId
-            })
-        });
-    }
-
-    // System endpoints
-    async getModels() {
-        return this.request('/models');
-    }
-
-    async getHealth() {
-        return this.request('/health');
-    }
 }
 
 // Notification Manager

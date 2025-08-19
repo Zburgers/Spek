@@ -70,27 +70,29 @@ Why hash routing initially:
 
 Priority scale: P0 (critical), P1 (high), P2 (normal), P3 (nice-to-have)
 
-1) P0 — Make `/static` the only public source of truth
-	 - Actions:
-		 - Use `static/index.html` as entry; delete root `index.html` (you’ll handle the deletion).
-		 - Ensure `<link>` and `<script>` tags use `/static/...` paths.
-	 - Dependencies in codebase:
-		 - `static/index.html` lines with `<script src="/static/js/main.js">` and `<script src="/static/js/router.js">` already present.
-		 - `static/chat.html` uses `href="chat-styles.css"` → must become `/static/css/chat-styles.css`.
-		 - `static/login.html` uses `href="login-styles.css"` → must become `/static/css/login-styles.css`.
-		 - Back-links to `index.html` in `chat.html` and `login.html` should point to `/#/` or `/` and be intercepted by router.
+1) P0 — Make `/static` the only public source of truth — DONE
+     - Actions:
+	     - [Done] Use `static/index.html` as entry; delete root `index.html` (you’ll handle the deletion).
+	     - [Done] Ensure `<link>` and `<script>` tags use `/static/...` paths.
+     - Dependencies in codebase:
+	     - [Done] `static/index.html` includes `<script src="/static/js/main.js">` and `<script src="/static/js/router.js">`.
+	     - [Done] `static/chat.html` now uses `/static/css/chat-styles.css` and its back link points to `/static/index.html`.
+	     - [Done] `static/login.html` now uses `/static/css/login-styles.css` and its back link points to `/static/index.html`.
+	     - [Done] Replaced all `/auth.html` references with `/static/login.html`.
 
-2) P0 — Fix router route names and navigation model
-	 - Actions:
-		 - Align `/auth.html` route name to login: use `#/login`.
-		 - Switch router to hash-based (listen to `hashchange`, default to `/#/`).
-		 - Update all internal links to `href="#/..." data-link`.
-	 - Dependencies:
-		 - `static/js/router.js` currently maps `/auth.html`, `/chat.html`, and sets `window.location.href` (full reload). We will change to hash-based and render views.
-		 - `static/js/main.js` intercepts clicks and uses pathname routing; update to hash-based interception.
-		 - `static/js/login.js` hard redirects to `chat.html` at lines 40 and 216 (grep found): update to router navigation.
+2) P1 — Fix router route names and navigation model (hash routing + SPA) — IN PROGRESS
+     - Actions:
+	     - [Done] Align `/auth.html` route name to login; canonicalized to `/static/login.html` for now.
+	     - [Next] Switch router to hash-based (listen to `hashchange`, default to `/#/`).
+	     - [Next] Update internal links to `href="#/..." data-link` and render views without reloads.
+     - Notes:
+	     - We intentionally moved hash-routing to P1 to avoid breaking navigation during P0 path normalization.
+     - Dependencies:
+	     - `static/js/router.js` to be refactored to hash-based and call view mounts.
+	     - `static/js/main.js` to intercept hash links and manage view lifecycle.
+	     - `static/js/login.js` currently hard-redirects to `/static/chat.html`; the SPA login view will navigate via router instead.
 
-3) P1 — Single-page rendering via views
+3) P1 — Single-page rendering via views — NOT STARTED (next)
 	 - Actions:
 		 - Create `views/home.js`, `views/chat.js`, `views/login.js` to render into `#app`.
 		 - Move logic from inline scripts in `static/index.html` and from `static/js/login.js` and chat logic into these modules.
@@ -98,21 +100,21 @@ Priority scale: P0 (critical), P1 (high), P2 (normal), P3 (nice-to-have)
 		 - `static/index.html` contains an incomplete inline script block and stray markup that must be removed; rendering should come from views.
 		 - `static/js/main.js`’s page-specific initializers (`initializeAuthPage`, etc.) become view mounts.
 
-4) P1 — Centralize API and auth state
+4) P1 — Centralize API and auth state — NOT STARTED (next)
 	 - Actions:
 		 - Extract `APIClient` from `main.js` to `static/js/lib/api.js` and expose a simple interface; keep base URL `/api/v1`.
 		 - Create `static/js/lib/store.js` to manage `access_token`, `refresh_token`, `currentUser` state.
 	 - Dependencies:
 		 - `static/js/main.js` currently owns `APIClient` and auth state; refactor to import from `lib/`.
 
-5) P1 — CSS dedup and variables
+5) P1 — CSS dedup and variables — NOT STARTED
 	 - Actions:
 		 - Introduce `base.css` (or extend `components.css`) with CSS variables for colors/spacing.
 		 - Prune duplicates in `chat-styles.css` and `login-styles.css` to rely on shared components.
 	 - Dependencies:
 		 - `static/css/components.css`, `static/css/main.css`, `static/css/chat-styles.css`, `static/css/login-styles.css`.
 
-6) Backend/Nginx fallback (P2)
+6) Backend/Nginx fallback (P2) — NOT STARTED
 	 - Actions:
 		 - For hash routing, backend changes are optional. For future path routing, add FastAPI catch-all to serve `index.html` for non-API, non-static paths.
 		 - Update Nginx `default.conf` to include `try_files $uri /index.html;` and alias for `/static/`.
@@ -120,14 +122,14 @@ Priority scale: P0 (critical), P1 (high), P2 (normal), P3 (nice-to-have)
 		 - `src/app/main.py`: currently mounts `/static` and serves `/index.html`. Add optional catch-all when moving to path routing.
 		 - `default.conf`: production reverse proxy rules.
 
-7) P2 — Remove dead code and tighten events
+7) P2 — Remove dead code and tighten events — NOT STARTED
 	 - Actions:
 		 - Remove stray/incomplete script blocks in `static/index.html`.
 		 - Ensure event listeners are attached on mount and removed on unmount.
 	 - Dependencies:
 		 - `static/index.html` (clean-up), `static/js/main.js` (listener lifecycles).
 
-8) P3 — Lazy-loading and DX niceties
+8) P3 — Lazy-loading and DX niceties — NOT STARTED
 	 - Actions:
 		 - Dynamically import heavy views only when needed.
 		 - Add a DEBUG flag to gate verbose logs.
@@ -137,7 +139,7 @@ Priority scale: P0 (critical), P1 (high), P2 (normal), P3 (nice-to-have)
 ---
 
 # Dependency evidence (grep highlights)
-- `static/js/login.js`: `window.location.href = 'chat.html';` at lines 40 and 216 → must become router navigate.
+- `static/js/login.js`: previously redirected to `chat.html`; now points to `/static/chat.html`. Will be replaced by router navigation in SPA phase.
 - `static/js/router.js`: uses `/auth.html` and pushes pathnames; switches to `window.location.href` for non-root; must be replaced with hash-based render. Also maps to `/static/index.html`.
 - `static/chat.html`: `<link rel="stylesheet" href="chat-styles.css">` and back button `href="index.html"` → update to `/static/css/chat-styles.css` and `/#/`.
 - `static/login.html`: `<link rel="stylesheet" href="login-styles.css">` and back button `href="index.html"` → update to `/static/css/login-styles.css` and `/#/`.
@@ -154,4 +156,4 @@ Feasible now. The backend already serves `/static` and `/index.html`. Hash routi
 - Asset path mistakes: enforce absolute `/static/...` paths; a quick 404 sweep in dev.
 
 # Ready for implementation
-Once you complete the file moves, I can execute the router/view refactor and path fixes in a focused PR.
+P0 is complete. Proceeding now with P1: hash-based router, view modules, and centralized API/auth store per the plan above.

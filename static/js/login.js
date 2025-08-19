@@ -37,7 +37,7 @@ class SpekAuth {
 
         // Continue button in success modal
         document.getElementById('continueBtn').addEventListener('click', () => {
-            window.location.href = 'chat.html';
+            window.location.href = '/static/chat.html';
         });
 
         // Social login buttons
@@ -213,7 +213,7 @@ class SpekAuth {
             this.storeAuthTokens(response);
             
             // Redirect to chat
-            window.location.href = 'chat.html';
+            window.location.href = '/static/chat.html';
             
         } catch (error) {
             console.error('Login error:', error);

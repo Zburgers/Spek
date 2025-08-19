@@ -1,4 +1,4 @@
-// Client-side Router for SPA-like navigation
+// Hash-based Router for SPA navigation
 class Router {
     constructor() {
         this.routes = new Map();
@@ -7,197 +7,103 @@ class Router {
     }
 
     init() {
-        // Handle browser back/forward
-        window.addEventListener('popstate', () => {
-            this.handleRoute(window.location.pathname + window.location.search);
+        // Listen for hash changes
+        window.addEventListener('hashchange', () => {
+            this.handleRoute(window.location.hash);
         });
-
+        
+        // Handle clicks on data-link elements
+        document.addEventListener('click', (e) => {
+            if (e.target.hasAttribute('data-link') || e.target.closest('[data-link]')) {
+                e.preventDefault();
+                const link = e.target.hasAttribute('data-link') ? e.target : e.target.closest('[data-link]');
+                const href = link.getAttribute('href');
+                if (href && href.startsWith('#/')) {
+                    this.navigateTo(href);
+                }
+            }
+        });
+        
         // Handle initial route
-        this.handleRoute(window.location.pathname + window.location.search);
+        this.handleRoute(window.location.hash);
     }
 
     setupRoutes() {
-        // Define routes and their handlers
-        this.routes.set('/', {
+        // Define hash routes and their handlers
+        this.routes.set('#/', {
             title: 'Spek - Multimodal AI Platform',
-            handler: () => this.loadPage('/static/index.html')
+            handler: () => this.loadView('home')
         });
-
-        // Explicit route for canonical landing page
-        this.routes.set('/index.html', {
-            title: 'Spek - Multimodal AI Platform',
-            handler: () => this.loadPage('/static/index.html')
-        });
-
-        this.routes.set('/auth.html', {
+        this.routes.set('#/login', {
             title: 'Sign In - Spek',
-            handler: () => this.loadPage('/static/auth.html')
+            handler: (queryString) => this.loadView('login', queryString)
         });
-
-        this.routes.set('/chat.html', {
+        this.routes.set('#/chat', {
             title: 'Chat - Spek',
-            handler: () => this.loadPage('/static/chat.html'),
+            handler: () => this.loadView('chat'),
             requiresAuth: true
         });
-
-        this.routes.set('/documents.html', {
-            title: 'Documents - Spek',
-            handler: () => this.loadPage('/static/documents.html'),
-            requiresAuth: true
-        });
-
-        this.routes.set('/dashboard.html', {
-            title: 'Dashboard - Spek',
-            handler: () => this.loadPage('/static/dashboard.html'),
-            requiresAuth: true
-        });
-
-        this.routes.set('/profile.html', {
-            title: 'Profile - Spek',
-            handler: () => this.loadPage('/static/profile.html'),
-            requiresAuth: true
-        });
+        // Add more routes as needed
     }
 
-    async handleRoute(path) {
-        // Extract pathname from full path
-        const url = new URL(path, window.location.origin);
-        const pathname = url.pathname;
+    handleRoute(hash) {
+        if (!hash || hash === '' || hash === '#') {
+            hash = '#/';
+        }
         
-        // Find matching route
-        let route = this.routes.get(pathname);
+        // Separate path from query parameters
+        const [path, queryString] = hash.split('?');
+        const route = this.routes.get(path);
         
-        // Handle special cases
-        if (!route) {
-            // Check if it's an HTML file request
-            if (pathname.endsWith('.html')) {
-                route = this.routes.get(pathname);
-            }
-        }
-
-        // If still no route found, redirect to canonical index page
-        if (!route) {
-            console.log('Route not found:', pathname, 'redirecting to /index.html');
-            this.navigate('/index.html');
-            return;
-        }
-
-        // Check authentication requirement
-        if (route.requiresAuth && !window.spekApp?.isAuthenticated) {
-            console.log('Route requires auth, redirecting to login');
-            this.navigate('/auth.html');
-            return;
-        }
-
-        // Update current route
-        this.currentRoute = { path: pathname, route };
-
-        // Update document title
-        document.title = route.title;
-
-        // Execute route handler
-        try {
-            await route.handler();
-        } catch (error) {
-            console.error('Route handler error:', error);
-            window.spekApp?.notifications?.error('Failed to load page');
-        }
-    }
-
-    async loadPage(pagePath) {
-        try {
-            // Show loading
-            window.spekApp?.showLoading();
-
-            // Check if we're at the root and trying to load index.html
-            if (window.location.pathname === '/' && pagePath === '/static/index.html') {
-                // We're already at the root, which serves index.html, no need to redirect
-                window.spekApp?.hideLoading();
+        if (route) {
+            document.title = route.title;
+            if (route.requiresAuth && !window.spekApp?.isAuthenticated) {
+                this.navigateTo('#/login');
                 return;
             }
-            
-            // For other pages, redirect if needed
-            if (window.location.pathname !== pagePath.replace('/static', '')) {
-                window.location.href = pagePath.replace('/static', '');
-                return;
-            }
-
-            // Page is already loaded, just hide loading
-            window.spekApp?.hideLoading();
-        } catch (error) {
-            console.error('Failed to load page:', error);
-            window.spekApp?.hideLoading();
-            throw error;
-        }
-    }
-
-    navigate(path, replace = false) {
-        if (replace) {
-            window.history.replaceState(null, '', path);
+            route.handler(queryString);
+            this.currentRoute = hash;
         } else {
-            window.history.pushState(null, '', path);
+            // 404 fallback
+            this.loadNotFound();
         }
-        this.handleRoute(path);
     }
 
-    back() {
-        window.history.back();
+    navigateTo(hash) {
+        if (window.location.hash !== hash) {
+            window.location.hash = hash;
+        } else {
+            this.handleRoute(hash);
+        }
     }
 
-    forward() {
-        window.history.forward();
+    loadView(viewName, queryString = null) {
+        // Dynamically import and render the view
+        import(`/static/js/views/${viewName}.js`).then(module => {
+            if (module && typeof module.render === 'function') {
+                module.render(queryString);
+            }
+        }).catch(() => {
+            this.loadNotFound();
+        });
+    }
+
+    loadNotFound() {
+        const app = document.getElementById('app');
+        if (app) {
+            app.innerHTML = '<h2 style="color:red">404 - Page Not Found</h2>';
+        }
+        document.title = '404 - Not Found';
     }
 
     getCurrentRoute() {
         return this.currentRoute;
     }
 
-    isCurrentRoute(path) {
-        return this.currentRoute?.path === path;
-    }
-}
-
-// Utility functions for URL management
-class URLUtils {
-    static getQueryParams() {
-        const params = new URLSearchParams(window.location.search);
-        const result = {};
-        for (const [key, value] of params) {
-            result[key] = value;
-        }
-        return result;
-    }
-
-    static getQueryParam(name, defaultValue = null) {
-        const params = new URLSearchParams(window.location.search);
-        return params.get(name) || defaultValue;
-    }
-
-    static setQueryParam(name, value) {
-        const url = new URL(window.location);
-        url.searchParams.set(name, value);
-        window.history.replaceState(null, '', url.toString());
-    }
-
-    static removeQueryParam(name) {
-        const url = new URL(window.location);
-        url.searchParams.delete(name);
-        window.history.replaceState(null, '', url.toString());
-    }
-
-    static updateQueryParams(params) {
-        const url = new URL(window.location);
-        Object.entries(params).forEach(([key, value]) => {
-            if (value === null || value === undefined) {
-                url.searchParams.delete(key);
-            } else {
-                url.searchParams.set(key, value);
-            }
-        });
-        window.history.replaceState(null, '', url.toString());
+    isCurrentRoute(hash) {
+        return this.currentRoute === hash;
     }
 }
 
 // Export classes
 window.Router = Router;
-window.URLUtils = URLUtils;

@@ -298,15 +298,15 @@
     <header class="header">
         <div class="container">
             <nav class="nav">
-                <a href="#" class="logo">🧠 Spek</a>
+                <a href="#/" class="logo" data-link>🧠 Spek</a>
                 <ul class="nav-links">
                     <li><a href="#features">Features</a></li>
-                    <li><a href="#app">Try Now</a></li>
+                    <li><a href="#/chat" data-link>Try Now</a></li>
                     <li><a href="#about">About</a></li>
                 </ul>
                 <div class="auth-buttons">
-                    <button id="loginBtn" class="btn btn-outline">Sign In</button>
-                    <button id="registerBtn" class="btn btn-primary">Get Started</button>
+                    <a href="#/login" class="btn btn-outline" data-link>Sign In</a>
+                    <a href="#/login?mode=register" class="btn btn-primary" data-link>Get Started</a>
                 </div>
             </nav>
         </div>
@@ -319,7 +319,7 @@
             <section class="hero">
                 <h1>Next-Generation AI Conversations</h1>
                 <p>Experience the future of AI interaction with Spek's multimodal platform. Chat with text, voice, and documents seamlessly.</p>
-                <a href="#app" class="btn btn-primary">Start Chatting</a>
+                <a href="#/chat" class="btn btn-primary" data-link>Start Chatting</a>
             </section>
 
             <!-- Features Section -->
@@ -346,283 +346,15 @@
                 </div>
             </section>
 
-            <!-- App Section -->
-            <section id="app" class="app-section">
-                <div class="container">
-                    <div class="app-container">
-                        <h2 style="text-align: center; margin-bottom: 2rem;">Try Spek Now</h2>
-                        
-                        <!-- Authentication Form -->
-                        <div id="authSection" class="auth-form">
-                            <div id="authAlert"></div>
-                            <form id="authForm">
-                                <div id="registerFields" class="hidden">
-                                    <div class="form-group">
-                                        <label for="fullName">Full Name</label>
-                                        <input type="text" id="fullName" name="fullName" required>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="email">Email</label>
-                                    <input type="email" id="email" name="email" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="password">Password</label>
-                                    <input type="password" id="password" name="password" required>
-                                </div>
-                                <button type="submit" id="authSubmitBtn" class="btn btn-primary">Sign In</button>
-                                <p style="margin-top: 1rem; text-align: center;">
-                                    <span id="authToggleText">Don't have an account?</span>
-                                    <a href="#" id="authToggleLink">Sign Up</a>
-                                </p>
-                            </form>
-                        </div>
-
-                        <!-- Chat Interface -->
-                        <div id="chatSection" class="hidden">
-                            <div class="chat-container">
-                                <div id="chatMessages" class="chat-messages">
-                                    <div class="message ai">
-                                        <strong>Spek AI:</strong> Hello! I'm your AI assistant. How can I help you today?
-                                    </div>
-                                </div>
-                                <div class="chat-input-container">
-                                    <input type="text" id="chatInput" class="chat-input" placeholder="Type your message...">
-                                    <button id="sendBtn" class="btn btn-primary">Send</button>
-                                    <button id="voiceBtn" class="btn btn-outline">🎙️</button>
-                                </div>
-                            </div>
-                            <div style="margin-top: 1rem; text-align: center;">
-                                <button id="logoutBtn" class="btn btn-outline">Logout</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            <!-- SPA App Shell -->
+            <div id="app"><!-- SPA views will render here --></div>
         </div>
     </main>
 
-    <script>
-        // Global state
-        let isLoggedIn = false;
-        let authToken = null;
-        let isRegistering = false;
-
-        // DOM elements
-        const authSection = document.getElementById('authSection');
-        const chatSection = document.getElementById('chatSection');
-        const authForm = document.getElementById('authForm');
-        const authAlert = document.getElementById('authAlert');
-        const registerFields = document.getElementById('registerFields');
-        const authSubmitBtn = document.getElementById('authSubmitBtn');
-        const authToggleText = document.getElementById('authToggleText');
-        const authToggleLink = document.getElementById('authToggleLink');
-        const chatMessages = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const voiceBtn = document.getElementById('voiceBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const loginBtn = document.getElementById('loginBtn');
-        const registerBtn = document.getElementById('registerBtn');
-
-        // API base URL
-        const API_BASE = window.location.origin + '/api/v1';
-
-        // Show alert message
-        function showAlert(message, type = 'error') {
-            authAlert.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
-            setTimeout(() => {
-                authAlert.innerHTML = '';
-            }, 5000);
-        }
-
-        // Toggle between login and register
-        function toggleAuthMode() {
-            isRegistering = !isRegistering;
-            if (isRegistering) {
-                registerFields.classList.remove('hidden');
-                authSubmitBtn.textContent = 'Sign Up';
-                authToggleText.textContent = 'Already have an account?';
-                authToggleLink.textContent = 'Sign In';
-            } else {
-                registerFields.classList.add('hidden');
-                authSubmitBtn.textContent = 'Sign In';
-                authToggleText.textContent = "Don't have an account?";
-                authToggleLink.textContent = 'Sign Up';
-            }
-        }
-
-        // Show chat interface
-        function showChat() {
-            authSection.classList.add('hidden');
-            chatSection.classList.remove('hidden');
-            isLoggedIn = true;
-        }
-
-        // Show auth interface
-        function showAuth() {
-            authSection.classList.remove('hidden');
-            chatSection.classList.add('hidden');
-            isLoggedIn = false;
-            authToken = null;
-        }
-
-        // Add message to chat
-        function addMessage(content, sender = 'user') {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}`;
-            messageDiv.innerHTML = `<strong>${sender === 'user' ? 'You' : 'Spek AI'}:</strong> ${content}`;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Send chat message
-        async function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message) return;
-
-            addMessage(message, 'user');
-            chatInput.value = '';
-
-            try {
-                const response = await fetch(`${API_BASE}/chat/text`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        session_id: null
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    addMessage(data.response || 'Sorry, I couldn\'t process that request.', 'ai');
-                } else {
-                    addMessage('Sorry, there was an error processing your request.', 'ai');
-                }
-            } catch (error) {
-                console.error('Error sending message:', error);
-                addMessage('Sorry, there was a connection error.', 'ai');
-            }
-        }
-
-        // Handle authentication
-        async function handleAuth(event) {
-            event.preventDefault();
-            
-            const formData = new FormData(authForm);
-            const email = formData.get('email');
-            const password = formData.get('password');
-            
-            if (isRegistering) {
-                const fullName = formData.get('fullName');
-                try {
-                    const response = await fetch(`${API_BASE}/users/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            email: email,
-                            username: email,
-                            full_name: fullName,
-                            password: password
-                        })
-                    });
-
-                    if (response.ok) {
-                        showAlert('Account created successfully! Please sign in.', 'success');
-                        toggleAuthMode();
-                    } else {
-                        const error = await response.json();
-                        showAlert(error.detail || 'Registration failed');
-                    }
-                } catch (error) {
-                    console.error('Registration error:', error);
-                    showAlert('Registration failed. Please try again.');
-                }
-            } else {
-                try {
-                    const response = await fetch(`${API_BASE}/login`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
-                        body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        authToken = data.access_token;
-                        showChat();
-                    } else {
-                        const error = await response.json();
-                        showAlert(error.detail || 'Login failed');
-                    }
-                } catch (error) {
-                    console.error('Login error:', error);
-                    showAlert('Login failed. Please try again.');
-                }
-            }
-        }
-
-        // Event listeners
-        authForm.addEventListener('submit', handleAuth);
-        authToggleLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleAuthMode();
-        });
-
-        sendBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        logoutBtn.addEventListener('click', showAuth);
-        loginBtn.addEventListener('click', () => {
-            document.getElementById('app').scrollIntoView({ behavior: 'smooth' });
-        });
-        registerBtn.addEventListener('click', () => {
-            isRegistering = true;
-            toggleAuthMode();
-            document.getElementById('app').scrollIntoView({ behavior: 'smooth' });
-        });
-
-        voiceBtn.addEventListener('click', () => {
-            showAlert('Voice feature coming soon!', 'success');
-        });
-
-        // Smooth scrolling for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth' });
-                }
-            });
-        });
-
-        // Initialize
-        console.log('Spek Frontend Loaded Successfully!');
-    </script>
+    <script src="/static/js/router.js"></script>
+    <script src="/static/js/main.js"></script>
 </body>
 </html>
-                    </a>
-                    <a href="#features" class="btn btn-secondary btn-large">
-                        <i class="fas fa-play"></i>
-                        Learn More
-                    </a>
-                </div>
-                <div class="hero-stats">
-                    <div class="stat">
-                        <span class="stat-number">10K+</span>
-                        <span class="stat-label">Conversations</span>
                     </div>
                     <div class="stat">
                         <span class="stat-number">99.9%</span>
@@ -800,11 +532,11 @@
                 <h2>Ready to Experience AI Like Never Before?</h2>
                 <p>Join thousands of users already using Spek for their AI conversations</p>
                 <div class="cta-actions">
-                    <a href="/auth.html?mode=register" class="btn btn-primary btn-large">
+                    <a href="#/login?mode=register" class="btn btn-primary btn-large" data-link>
                         <i class="fas fa-user-plus"></i>
                         Create Free Account
                     </a>
-                    <a href="/auth.html" class="btn btn-outline btn-large">
+                    <a href="#/login" class="btn btn-outline btn-large" data-link>
                         <i class="fas fa-sign-in-alt"></i>
                         Sign In
                     </a>

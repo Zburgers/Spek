@@ -30,6 +30,9 @@ RUN groupadd --gid 1000 app \
 # Copy the virtual environment from the builder stage
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 
+# Copy the application code (including static files)
+COPY --from=builder --chown=app:app /app /code
+
 # Ensure the virtual environment is in the PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
