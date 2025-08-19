@@ -8,12 +8,14 @@ import redis.asyncio as redis
 from arq import create_pool
 from arq.connections import RedisSettings
 from fastapi import APIRouter, Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 
 from ..api.dependencies import get_current_superuser
 from ..core.utils.rate_limit import rate_limiter
 from ..middleware.client_cache_middleware import ClientCacheMiddleware
+from ..middleware.security_headers_middleware import SecurityHeadersMiddleware
 from ..models import *  # noqa: F403
 from .config import (
     AppSettings,
@@ -201,6 +203,19 @@ def create_application(
         lifespan = lifespan_factory(settings, create_tables_on_start=create_tables_on_start)
 
     application = FastAPI(lifespan=lifespan, **kwargs)
+
+    # Add security headers middleware
+    application.add_middleware(SecurityHeadersMiddleware)
+
+    # Add CORS middleware for security
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://localhost:8000"],  # Add your domain(s)
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+        allow_headers=["*"],
+    )
+
     application.include_router(router)
 
     if isinstance(settings, ClientSideCacheSettings):

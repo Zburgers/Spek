@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -27,9 +27,9 @@ class CRUDDocument:
         result = await db.execute(select(Document).where(Document.uuid == uuid))
         return result.scalar_one_or_none()
 
-    async def get_by_user(self, db: AsyncSession, user_id: UUID) -> List[Document]:
+    async def get_by_user(self, db: AsyncSession, user_id: UUID) -> list[Document]:
         result = await db.execute(select(Document).where(Document.user_id == user_id))
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def update_status(self, db: AsyncSession, *, uuid: UUID, status: str) -> Optional[Document]:
         db_obj = await self.get(db, uuid)

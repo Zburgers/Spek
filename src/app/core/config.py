@@ -64,7 +64,8 @@ class FirstUserSettings(BaseSettings):
     ADMIN_NAME: str = config("ADMIN_NAME", default="admin")
     ADMIN_EMAIL: str = config("ADMIN_EMAIL", default="admin@admin.com")
     ADMIN_USERNAME: str = config("ADMIN_USERNAME", default="admin")
-    ADMIN_PASSWORD: str = config("ADMIN_PASSWORD", default="!Ch4ng3Th1sP4ssW0rd!")
+    # SECURITY: Remove default password - must be set via environment variable
+    ADMIN_PASSWORD: str = config("ADMIN_PASSWORD")
 
 
 class TestSettings(BaseSettings): ...

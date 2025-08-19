@@ -6,6 +6,7 @@ class SpekApp {
         this.apiClient = new APIClient();
         this.router = new Router();
         this.notifications = new NotificationManager();
+        this.tokenManager = new SecureTokenManager(); // Secure token storage
         window.spekApp = this; // Expose for router auth checks
         this.init();
     }
@@ -23,7 +24,8 @@ class SpekApp {
     }
 
     async checkAuthStatus() {
-        const token = localStorage.getItem('access_token');
+        // Try to get a valid token (will attempt refresh if needed)
+        const token = await this.tokenManager.getValidToken();
         if (token) {
             try {
                 // Verify token with server
@@ -45,8 +47,7 @@ class SpekApp {
     clearAuth() {
         this.currentUser = null;
         this.isAuthenticated = false;
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
+        this.tokenManager.clearTokens(); // Clear tokens from memory
         this.updateUIForAuth();
     }
 

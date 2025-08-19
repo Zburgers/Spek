@@ -1,4 +1,3 @@
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -126,7 +125,7 @@ async def query_document(
 async def list_user_documents(
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(async_get_db),
-) -> List[dict]:
+) -> list[dict]:
     """List all documents for the current user."""
 
     documents = await document.get_by_user(db, current_user.uuid)

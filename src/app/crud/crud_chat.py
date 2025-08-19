@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -24,11 +24,11 @@ class CRUDChatSession:
         result = await db.execute(select(ChatSession).where(ChatSession.uuid == uuid))
         return result.scalar_one_or_none()
 
-    async def get_by_user(self, db: AsyncSession, user_id: UUID) -> List[ChatSession]:
+    async def get_by_user(self, db: AsyncSession, user_id: UUID) -> list[ChatSession]:
         result = await db.execute(
-            select(ChatSession).where(ChatSession.user_id == user_id, ChatSession.is_active == True)
+            select(ChatSession).where(ChatSession.user_id == user_id, ChatSession.is_active)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def update_title(self, db: AsyncSession, *, uuid: UUID, title: str) -> Optional[ChatSession]:
         db_obj = await self.get(db, uuid)
@@ -59,14 +59,14 @@ class CRUDChatMessage:
         await db.refresh(db_obj)
         return db_obj
 
-    async def get_by_session(self, db: AsyncSession, session_id: UUID, limit: int = 100) -> List[ChatMessage]:
+    async def get_by_session(self, db: AsyncSession, session_id: UUID, limit: int = 100) -> list[ChatMessage]:
         result = await db.execute(
             select(ChatMessage)
             .where(ChatMessage.session_id == session_id)
             .order_by(ChatMessage.created_at.desc())
             .limit(limit)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def get_session_message_count(self, db: AsyncSession, session_id: UUID) -> int:
         result = await db.execute(

@@ -1,11 +1,14 @@
 import uuid as uuid_pkg
 from datetime import UTC, datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..core.db.database import Base
+
+if TYPE_CHECKING:
+    from .user import User
 
 
 class Document(Base):

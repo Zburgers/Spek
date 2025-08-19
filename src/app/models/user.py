@@ -1,10 +1,15 @@
 import uuid as uuid_pkg
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..core.db.database import Base
+
+if TYPE_CHECKING:
+    from .chat import ChatSession
+    from .document import Document
 
 
 class User(Base):
@@ -18,7 +23,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String)
 
     profile_image_url: Mapped[str] = mapped_column(String, default="https://profileimageurl.com")
-    uuid: Mapped[uuid_pkg.UUID] = mapped_column(default_factory=uuid_pkg.uuid4, primary_key=True, unique=True)
+    uuid: Mapped[uuid_pkg.UUID] = mapped_column(default_factory=uuid_pkg.uuid4, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
@@ -28,5 +33,9 @@ class User(Base):
     tier_id: Mapped[int | None] = mapped_column(ForeignKey("tier.id"), index=True, default=None, init=False)
 
     # Relationships
-    chat_sessions: Mapped[list["ChatSession"]] = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan", init=False)
-    documents: Mapped[list["Document"]] = relationship("Document", back_populates="user", cascade="all, delete-orphan", init=False)
+    chat_sessions: Mapped[list["ChatSession"]] = relationship(
+        "ChatSession", back_populates="user", cascade="all, delete-orphan", init=False
+    )
+    documents: Mapped[list["Document"]] = relationship(
+        "Document", back_populates="user", cascade="all, delete-orphan", init=False
+    )

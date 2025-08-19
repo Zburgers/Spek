@@ -1,11 +1,14 @@
 import uuid as uuid_pkg
 from datetime import UTC, datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..core.db.database import Base
+
+if TYPE_CHECKING:
+    from .user import User
 
 
 class ChatSession(Base):
@@ -20,7 +23,9 @@ class ChatSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))
 
     # Relationships
-    messages: Mapped[list["ChatMessage"]] = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan", init=False)
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        "ChatMessage", back_populates="session", cascade="all, delete-orphan", init=False
+    )
     user: Mapped["User"] = relationship("User", back_populates="chat_sessions", init=False)
 
 

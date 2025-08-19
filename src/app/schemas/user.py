@@ -1,3 +1,4 @@
+import uuid as uuid_pkg
 from datetime import datetime
 from typing import Annotated
 
@@ -21,6 +22,7 @@ class User(TimestampSchema, UserBase, UUIDSchema, PersistentDeletion):
 
 class UserRead(BaseModel):
     id: int
+    uuid: uuid_pkg.UUID  # Add missing uuid field
 
     name: Annotated[str, Field(min_length=2, max_length=30, examples=["User Userson"])]
     username: Annotated[str, Field(min_length=2, max_length=20, pattern=r"^[a-z0-9]+$", examples=["userson"])]

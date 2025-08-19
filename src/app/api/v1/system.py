@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List
 
 from fastapi import APIRouter
 
@@ -9,8 +8,8 @@ from ...schemas.chat import HealthResponse, ModelInfo
 router = APIRouter(tags=["system"])
 
 
-@router.get("/models", response_model=List[ModelInfo])
-async def get_available_models() -> List[ModelInfo]:
+@router.get("/models", response_model=list[ModelInfo])
+async def get_available_models() -> list[ModelInfo]:
     """Get list of available AI models."""
 
     # TODO: In production, this would query actual model availability

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -62,7 +62,7 @@ class VoiceChatResponse(BaseModel):
 
 class ChatHistoryResponse(BaseModel):
     session_id: str
-    messages: List[ChatMessageRead]
+    messages: list[ChatMessageRead]
     total_messages: int
 
 
@@ -120,7 +120,7 @@ class ModelInfo(BaseModel):
     id: str
     name: str
     type: str
-    capabilities: List[str]
+    capabilities: list[str]
     is_available: bool
 
 
