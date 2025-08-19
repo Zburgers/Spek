@@ -15,6 +15,7 @@ from fastapi.openapi.utils import get_openapi
 from ..api.dependencies import get_current_superuser
 from ..core.utils.rate_limit import rate_limiter
 from ..middleware.client_cache_middleware import ClientCacheMiddleware
+from ..middleware.input_validation_middleware import InputValidationMiddleware
 from ..middleware.security_headers_middleware import SecurityHeadersMiddleware
 from ..models import *  # noqa: F403
 from .config import (
@@ -203,6 +204,9 @@ def create_application(
         lifespan = lifespan_factory(settings, create_tables_on_start=create_tables_on_start)
 
     application = FastAPI(lifespan=lifespan, **kwargs)
+
+    # Add input validation middleware (first for security)
+    application.add_middleware(InputValidationMiddleware)
 
     # Add security headers middleware
     application.add_middleware(SecurityHeadersMiddleware)
