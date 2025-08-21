@@ -117,6 +117,10 @@ class CRUDAdminSettings(BaseSettings):
     CRUD_ADMIN_REDIS_SSL: bool = config("CRUD_ADMIN_REDIS_SSL", default=False)
 
 
+class AISettings(BaseSettings):
+    API_KEY: str = config("API_KEY", default="")
+
+
 class EnvironmentOption(Enum):
     LOCAL = "local"
     STAGING = "staging"
@@ -139,6 +143,7 @@ class Settings(
     RedisRateLimiterSettings,
     DefaultRateLimitSettings,
     CRUDAdminSettings,
+    AISettings,
     EnvironmentSettings,
 ):
     pass

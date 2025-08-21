@@ -35,6 +35,10 @@ class ChatSessionRead(ChatSessionBase, TimestampSchema, UUIDSchema):
     pass
 
 
+class UpdateTitleRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=100, description="New title for the chat session")
+
+
 class TextChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None

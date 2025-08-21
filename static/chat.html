@@ -10,51 +10,90 @@
 </head>
 <body>
     <div class="chat-container">
-        <header class="chat-header">
-            <div class="header-left">
-                <a href="/" class="back-btn">
-                    <i class="fas fa-arrow-left"></i>
-                </a>
-                <div class="chat-info">
-                    <h1>Spek Chat</h1>
-                    <span class="status">Connected</span>
-                </div>
-            </div>
-            <div class="header-right">
-                <button class="header-btn" id="logout-btn" title="Logout">
-                    <i class="fas fa-sign-out-alt"></i>
+        <!-- Chat History Sidebar -->
+        <aside class="chat-sidebar" id="chatSidebar">
+            <div class="sidebar-header">
+                <h3>Chat History</h3>
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
-        </header>
-
-        <div class="chat-messages" id="chatMessages">
-            <div class="message ai-message">
-                <div class="message-avatar">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div class="message-content">
-                    <div class="message-text">
-                        Hello! I'm Spek, your AI conversation assistant. How can I help you today?
-                    </div>
-                    <div class="message-time">Just now</div>
+            <div class="sidebar-content">
+                <button class="new-chat-btn" id="newChatBtn">
+                    <i class="fas fa-plus"></i>
+                    New Chat
+                </button>
+                <div class="chat-list" id="chatList">
+                    <!-- Chat sessions will be loaded here -->
+                    <div class="loading">Loading chat history...</div>
                 </div>
             </div>
-        </div>
+        </aside>
 
-        <div class="chat-input-area">
-            <form id="chat-form" class="input-container">
-                <div class="text-input-container">
-                    <textarea 
-                        id="messageInput" 
-                        placeholder="Type your message here..."
-                        rows="1"
-                    ></textarea>
-                    <button class="send-btn" id="sendBtn" title="Send Message" type="submit">
-                        <i class="fas fa-paper-plane"></i>
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <header class="chat-header">
+                <div class="header-left">
+                    <button class="menu-btn" id="menuBtn" title="Show Chat History">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <a href="/" class="back-btn">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div class="chat-info">
+                        <h1>Spek Chat</h1>
+                        <span class="status">Connected</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="header-btn" id="logout-btn" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
-            </form>
-        </div>
+            </header>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message ai-message">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-text">
+                            Hello! I'm Spek, your AI conversation assistant. How can I help you today?
+                        </div>
+                        <div class="message-time">Just now</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <form id="chat-form" class="input-container">
+                    <div class="input-tools">
+                        <button type="button" class="tool-btn" title="Attach File" id="attachBtn">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <button type="button" class="tool-btn" title="Voice Message" id="voiceBtn">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                    </div>
+                    <div class="text-input-container">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="Type your message here..."
+                            rows="1"
+                        ></textarea>
+                        <div class="input-actions">
+                            <button type="button" class="tool-btn" title="More Options" id="moreBtn">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="send-btn" id="sendBtn" title="Send Message" type="submit">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
     </div>
 
     <script src="/static/js/main.js"></script>

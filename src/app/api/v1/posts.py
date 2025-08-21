@@ -21,7 +21,7 @@ async def write_post(
     request: Request,
     username: str,
     post: PostCreate,
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[UserRead, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> PostRead:
     db_user = await crud_users.get(db=db, username=username, is_deleted=False, schema_to_select=UserRead)
@@ -29,7 +29,7 @@ async def write_post(
         raise NotFoundException("User not found")
 
     db_user = cast(UserRead, db_user)
-    if current_user["id"] != db_user.id:
+    if current_user.id != db_user.id:
         raise ForbiddenException()
 
     post_internal_dict = post.model_dump()
@@ -101,7 +101,7 @@ async def patch_post(
     username: str,
     id: int,
     values: PostUpdate,
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[UserRead, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> dict[str, str]:
     db_user = await crud_users.get(db=db, username=username, is_deleted=False, schema_to_select=UserRead)
@@ -109,7 +109,7 @@ async def patch_post(
         raise NotFoundException("User not found")
 
     db_user = cast(UserRead, db_user)
-    if current_user["id"] != db_user.id:
+    if current_user.id != db_user.id:
         raise ForbiddenException()
 
     db_post = await crud_posts.get(db=db, id=id, is_deleted=False, schema_to_select=PostRead)
@@ -126,7 +126,7 @@ async def erase_post(
     request: Request,
     username: str,
     id: int,
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[UserRead, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> dict[str, str]:
     db_user = await crud_users.get(db=db, username=username, is_deleted=False, schema_to_select=UserRead)
@@ -134,7 +134,7 @@ async def erase_post(
         raise NotFoundException("User not found")
 
     db_user = cast(UserRead, db_user)
-    if current_user["id"] != db_user.id:
+    if current_user.id != db_user.id:
         raise ForbiddenException()
 
     db_post = await crud_posts.get(db=db, id=id, is_deleted=False, schema_to_select=PostRead)

@@ -14,6 +14,7 @@ from ..crud.crud_tier import crud_tiers
 from ..crud.crud_users import crud_users
 from ..schemas.rate_limit import RateLimitRead, sanitize_path
 from ..schemas.tier import TierRead
+from ..schemas.user import UserRead
 
 logger = logging.getLogger(__name__)
 
@@ -23,23 +24,23 @@ DEFAULT_PERIOD = settings.DEFAULT_RATE_LIMIT_PERIOD
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)], db: Annotated[AsyncSession, Depends(async_get_db)]
-) -> dict[str, Any] | None:
+) -> UserRead:
     token_data = await verify_token(token, TokenType.ACCESS, db)
     if token_data is None:
         raise UnauthorizedException("User not authenticated.")
 
     if "@" in token_data.username_or_email:
-        user = await crud_users.get(db=db, email=token_data.username_or_email, is_deleted=False)
+        user = await crud_users.get(db=db, email=token_data.username_or_email, is_deleted=False, schema_to_select=UserRead)
     else:
-        user = await crud_users.get(db=db, username=token_data.username_or_email, is_deleted=False)
+        user = await crud_users.get(db=db, username=token_data.username_or_email, is_deleted=False, schema_to_select=UserRead)
 
     if user:
-        return cast(dict[str, Any], user)
+        return cast(UserRead, user)
 
     raise UnauthorizedException("User not authenticated.")
 
 
-async def get_optional_user(request: Request, db: AsyncSession = Depends(async_get_db)) -> dict | None:
+async def get_optional_user(request: Request, db: AsyncSession = Depends(async_get_db)) -> UserRead | None:
     token = request.headers.get("Authorization")
     if not token:
         return None
@@ -65,23 +66,23 @@ async def get_optional_user(request: Request, db: AsyncSession = Depends(async_g
         return None
 
 
-async def get_current_superuser(current_user: Annotated[dict, Depends(get_current_user)]) -> dict:
-    if not current_user["is_superuser"]:
+async def get_current_superuser(current_user: Annotated[UserRead, Depends(get_current_user)]) -> UserRead:
+    if not current_user.is_superuser:
         raise ForbiddenException("You do not have enough privileges.")
 
     return current_user
 
 
 async def rate_limiter_dependency(
-    request: Request, db: Annotated[AsyncSession, Depends(async_get_db)], user: dict | None = Depends(get_optional_user)
+    request: Request, db: Annotated[AsyncSession, Depends(async_get_db)], user: UserRead | None = Depends(get_optional_user)
 ) -> None:
     if hasattr(request.app.state, "initialization_complete"):
         await request.app.state.initialization_complete.wait()
 
     path = sanitize_path(request.url.path)
     if user:
-        user_id = user["id"]
-        tier = await crud_tiers.get(db, id=user["tier_id"], schema_to_select=TierRead)
+        user_id = user.id
+        tier = await crud_tiers.get(db, id=user.tier_id, schema_to_select=TierRead)
         if tier:
             tier = cast(TierRead, tier)
             rate_limit = await crud_rate_limits.get(db=db, tier_id=tier.id, path=path, schema_to_select=RateLimitRead)

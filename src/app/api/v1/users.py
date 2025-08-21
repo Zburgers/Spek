@@ -59,7 +59,7 @@ async def read_users(
 
 
 @router.get("/user/me/", response_model=UserRead)
-async def read_users_me(request: Request, current_user: Annotated[dict, Depends(get_current_user)]) -> dict:
+async def read_users_me(request: Request, current_user: Annotated[UserRead, Depends(get_current_user)]) -> UserRead:
     return current_user
 
 
@@ -77,7 +77,7 @@ async def patch_user(
     request: Request,
     values: UserUpdate,
     username: str,
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[UserRead, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> dict[str, str]:
     db_user = await crud_users.get(db=db, username=username, schema_to_select=UserRead)
@@ -85,7 +85,7 @@ async def patch_user(
         raise NotFoundException("User not found")
 
     db_user = cast(UserRead, db_user)
-    if db_user.username != current_user["username"]:
+    if db_user.username != current_user.username:
         raise ForbiddenException()
 
     if values.username != db_user.username:
@@ -106,7 +106,7 @@ async def patch_user(
 async def erase_user(
     request: Request,
     username: str,
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[UserRead, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(async_get_db)],
     token: str = Depends(oauth2_scheme),
 ) -> dict[str, str]:
@@ -114,7 +114,7 @@ async def erase_user(
     if not db_user:
         raise NotFoundException("User not found")
 
-    if username != current_user["username"]:
+    if username != current_user.username:
         raise ForbiddenException()
 
     await crud_users.delete(db=db, username=username)

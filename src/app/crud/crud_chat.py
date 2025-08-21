@@ -50,7 +50,7 @@ class CRUDChatSession:
 class CRUDChatMessage:
     async def create(self, db: AsyncSession, *, obj_in: ChatMessageCreate) -> ChatMessage:
         db_obj = ChatMessage(
-            session_id=obj_in.session_id,
+            session_id=UUID(obj_in.session_id),  # Convert string to UUID
             content=obj_in.content,
             message_type=obj_in.message_type,
         )
@@ -63,7 +63,7 @@ class CRUDChatMessage:
         result = await db.execute(
             select(ChatMessage)
             .where(ChatMessage.session_id == session_id)
-            .order_by(ChatMessage.created_at.desc())
+            .order_by(ChatMessage.created_at.asc())
             .limit(limit)
         )
         return result.scalars().all()
