@@ -56,11 +56,6 @@ body {
     background: none;
     border: none;
     font-size: 1.2rem;
-    color: #6b7280;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 6px;
-    transition: all 0.2s ease;
 }
 
 .sidebar-toggle:hover {
@@ -274,48 +269,6 @@ body {
 .menu-btn:hover {
     background-color: #e5e7eb;
     color: #374151;
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .chat-sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        height: 100vh;
-        z-index: 1000;
-        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-    }
-    
-    .chat-sidebar.hidden {
-        transform: translateX(-100%);
-    }
-    
-    .sidebar-toggle {
-        display: block;
-    }
-    
-    .menu-btn {
-        display: flex;
-    }
-    
-    .chat-main {
-        width: 100%;
-    }
-}
-
-/* Update existing container rule */
-
-/* Header */
-.chat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    background-color: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    z-index: 100;
 }
 
 .header-left {
@@ -589,7 +542,7 @@ body {
     width: 100%;
 }
 
-.input-tools {
+.input-tools, .input-actions {
     display: flex;
     gap: 0.5rem;
     align-items: flex-end;
@@ -623,12 +576,6 @@ body {
 .tool-btn.active {
     background-color: #6366f1;
     color: white;
-}
-
-.input-actions {
-    display: flex;
-    gap: 0.5rem;
-    align-items: flex-end;
 }
 
 .text-input-container {
@@ -1063,6 +1010,31 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .chat-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        z-index: 1000;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .chat-sidebar.hidden {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar-toggle {
+        display: block;
+    }
+    
+    .menu-btn {
+        display: flex;
+    }
+    
+    .chat-main {
+        width: 100%;
+    }
+    
     .chat-header {
         padding: 1rem;
     }
@@ -1097,7 +1069,7 @@ body {
         gap: 0.75rem;
     }
     
-    .input-actions {
+    .input-tools {
         justify-content: center;
     }
     

@@ -14,7 +14,7 @@ from ..crud.crud_tier import crud_tiers
 from ..crud.crud_users import crud_users
 from ..schemas.rate_limit import RateLimitRead, sanitize_path
 from ..schemas.tier import TierRead
-from ..schemas.user import UserRead
+from ..schemas.user import UserRead, UserReadPrivate
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,25 @@ async def get_current_user(
 
     if user:
         return cast(UserRead, user)
+
+    raise UnauthorizedException("User not authenticated.")
+
+
+async def get_current_user_private(
+    token: Annotated[str, Depends(oauth2_scheme)], db: Annotated[AsyncSession, Depends(async_get_db)]
+) -> UserReadPrivate:
+    """Get current user with private fields like is_superuser - use only when admin status is needed"""
+    token_data = await verify_token(token, TokenType.ACCESS, db)
+    if token_data is None:
+        raise UnauthorizedException("User not authenticated.")
+
+    if "@" in token_data.username_or_email:
+        user = await crud_users.get(db=db, email=token_data.username_or_email, is_deleted=False, schema_to_select=UserReadPrivate)
+    else:
+        user = await crud_users.get(db=db, username=token_data.username_or_email, is_deleted=False, schema_to_select=UserReadPrivate)
+
+    if user:
+        return cast(UserReadPrivate, user)
 
     raise UnauthorizedException("User not authenticated.")
 
@@ -66,7 +85,7 @@ async def get_optional_user(request: Request, db: AsyncSession = Depends(async_g
         return None
 
 
-async def get_current_superuser(current_user: Annotated[UserRead, Depends(get_current_user)]) -> UserRead:
+async def get_current_superuser(current_user: Annotated[UserReadPrivate, Depends(get_current_user_private)]) -> UserReadPrivate:
     if not current_user.is_superuser:
         raise ForbiddenException("You do not have enough privileges.")
 

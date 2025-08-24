@@ -28,3 +28,5 @@ python3 -m http.server [PORT]
 Example:
 python3 -m http.server 8081 
 [PORT] = 8081
+
+Go visit localhost:8001 to view the static site

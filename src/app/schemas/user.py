@@ -21,14 +21,19 @@ class User(TimestampSchema, UserBase, UUIDSchema, PersistentDeletion):
 
 
 class UserRead(BaseModel):
+    """Public user data - safe to expose to any authenticated user"""
     id: int
     uuid: UUID
     name: Annotated[str, Field(min_length=2, max_length=30, examples=["User Userson"])]
     username: Annotated[str, Field(min_length=2, max_length=20, pattern=r"^[a-z0-9]+$", examples=["userson"])]
     email: Annotated[EmailStr, Field(examples=["user.userson@example.com"])]
     profile_image_url: str
-    is_superuser: bool = False
     tier_id: int | None
+
+
+class UserReadPrivate(UserRead):
+    """Private user data - only for self-profile and admin views"""
+    is_superuser: bool = False
 
 
 class UserCreate(UserBase):

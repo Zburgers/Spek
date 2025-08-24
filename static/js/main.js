@@ -48,6 +48,10 @@ class SpekApp {
         this.isAuthenticated = false;
         localStorage.removeItem('access_token');
     }
+
+    getToken() {
+        return localStorage.getItem('access_token');
+    }
     
     // Updates UI elements present on all pages (e.g., nav bar)
     updateUIForAuth() {

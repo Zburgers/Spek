@@ -118,8 +118,12 @@ class CRUDAdminSettings(BaseSettings):
 
 
 class AISettings(BaseSettings):
-    API_KEY: str = config("API_KEY", default="")
-
+    API_KEY: SecretStr | None = config(
+        "AI_API_KEY",
+        cast=SecretStr,
+        # Backward-compat: fallback to legacy API_KEY if present; otherwise None
+        default=config("API_KEY", cast=SecretStr, default=None),
+    )
 
 class EnvironmentOption(Enum):
     LOCAL = "local"

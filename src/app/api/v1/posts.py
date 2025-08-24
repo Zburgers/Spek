@@ -112,7 +112,14 @@ async def patch_post(
     if current_user.id != db_user.id:
         raise ForbiddenException()
 
-    db_post = await crud_posts.get(db=db, id=id, is_deleted=False, schema_to_select=PostRead)
+    # FIXED: Add created_by_user_id to ensure ownership check
+    db_post = await crud_posts.get(
+        db=db, 
+        id=id, 
+        created_by_user_id=db_user.id,  # This ensures only the owner can modify
+        is_deleted=False, 
+        schema_to_select=PostRead
+    )
     if db_post is None:
         raise NotFoundException("Post not found")
 
@@ -137,7 +144,14 @@ async def erase_post(
     if current_user.id != db_user.id:
         raise ForbiddenException()
 
-    db_post = await crud_posts.get(db=db, id=id, is_deleted=False, schema_to_select=PostRead)
+    # FIXED: Add created_by_user_id to ensure ownership check
+    db_post = await crud_posts.get(
+        db=db, 
+        id=id, 
+        created_by_user_id=db_user.id,  # This ensures only the owner can delete
+        is_deleted=False, 
+        schema_to_select=PostRead
+    )
     if db_post is None:
         raise NotFoundException("Post not found")
 

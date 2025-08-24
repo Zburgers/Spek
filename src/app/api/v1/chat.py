@@ -8,9 +8,10 @@ import json
 from google import genai
 from google.genai import types
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status,Body
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+
 
 from ...api.dependencies import get_current_user
 from ...core.db.database import async_get_db
@@ -38,13 +39,21 @@ try:
         raise KeyError
     
     # Initialize the client - this is the correct way for the new SDK
-    client = genai.Client(api_key=GOOGLE_API_KEY)
-    
+    client = genai.Client(api_key=GOOGLE_API_KEY.get_secret_value())
+    print("DEBUG: Successfully initialized Gemini client")
+
 except KeyError:
     print("ERROR: GOOGLE_API_KEY environment variable not set.")
     client = None
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+def get_user_uuid(user):
+    """Helper function to safely extract UUID from user object (Pydantic model or dict)."""
+    if isinstance(user, dict):
+        return UUID(user["uuid"]) if isinstance(user["uuid"], str) else user["uuid"]
+    else:
+        return user.uuid
 
 def format_history_for_gemini(messages: List[ChatMessage]) -> List[types.Content]:
     """Converts a list of ChatMessage objects to the Gemini API format using the new SDK."""
@@ -92,8 +101,8 @@ async def text_chat(
             )
         
         session = await chat_session.get(db, uuid=session_uuid)
-        if not session or session.user_id != current_user['uuid']:
-            print(f"ERROR: Chat session not found or unauthorized access. Session ID: {session_uuid}, User ID: {current_user['uuid']}")
+        if not session or session.user_id != get_user_uuid(current_user):
+            print(f"ERROR: Chat session not found or unauthorized access. Session ID: {session_uuid}, User ID: {get_user_uuid(current_user)}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, 
                 detail="Chat session not found"
@@ -102,7 +111,7 @@ async def text_chat(
     else:
         # Create a new session if no ID is provided
         session_create = ChatSessionCreate(
-            user_id=current_user['uuid'],
+            user_id=get_user_uuid(current_user),
             title=request.message[:50] if len(request.message) > 3 else "New Chat"  # Simplified title creation
         )
         session = await chat_session.create(db, obj_in=session_create)
@@ -203,13 +212,13 @@ async def text_chat_stream(
                 return
             
             session = await chat_session.get(db, uuid=session_uuid)
-            if not session or session.user_id != current_user['uuid']:
+            if not session or session.user_id != get_user_uuid(current_user):
                 yield f"data: {json.dumps({'error': 'Chat session not found'})}\n\n"
                 return
         else:
             # Create a new session
             session_create = ChatSessionCreate(
-                user_id=current_user['uuid'],
+                user_id=get_user_uuid(current_user),
                 title=request.message[:50] if len(request.message) > 3 else "New Chat"
             )
             session = await chat_session.create(db, obj_in=session_create)
@@ -264,20 +273,21 @@ async def text_chat_stream(
             
             # Send completion signal
             yield f"data: {json.dumps({'complete': True})}\n\n"
-
+            
         except Exception as e:
             print(f"ERROR: Streaming error: {e}")
             yield f"data: {json.dumps({'error': 'AI service temporarily unavailable'})}\n\n"
-
+            
     return StreamingResponse(
         generate_stream(),
-        media_type="text/plain",
+        media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "Content-Type": "text/event-stream",
+            "Content-Type": "text/event-stream"
         }
     )
+
 
 
 @router.post("/voice", response_model=VoiceChatResponse)
@@ -303,7 +313,7 @@ async def voice_chat(
         try:
             session_uuid = UUID(request.session_id)
             session = await chat_session.get(db, uuid=session_uuid)
-            if not session or session.user_id != current_user['uuid']:
+            if not session or session.user_id != get_user_uuid(current_user):
                 print(f"ERROR: Voice chat session not found or unauthorized: {session_uuid}")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -319,7 +329,7 @@ async def voice_chat(
             )
     else:
         session_create = ChatSessionCreate(
-            user_id=current_user['uuid'],
+            user_id=get_user_uuid(current_user),
             title="Voice Chat",
             is_active=True,
         )
@@ -384,7 +394,7 @@ async def get_chat_history(
     
     # Verify session belongs to current user
     session = await chat_session.get(db, uuid=session_id)
-    if not session or session.user_id != current_user['uuid']:
+    if not session or session.user_id != get_user_uuid(current_user):
         print(f"ERROR: Chat history session not found or unauthorized: {session_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -422,10 +432,10 @@ async def get_user_chat_sessions(
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> List[ChatSessionRead]:
     """Get all chat sessions for the current user."""
-    print(f"DEBUG: Getting chat sessions for user: {current_user['uuid']}")
+    print(f"DEBUG: Getting chat sessions for user: {get_user_uuid(current_user)}")
     
     # Get all active sessions for the current user
-    sessions = await chat_session.get_by_user(db, user_id=current_user['uuid'])
+    sessions = await chat_session.get_by_user(db, user_id=get_user_uuid(current_user))
     print(f"DEBUG: Found {len(sessions)} sessions for user")
     
     return sessions
@@ -438,10 +448,10 @@ async def create_new_chat_session(
     title: Optional[str] = "New Chat",
 ) -> ChatSessionRead:
     """Create a new chat session for the current user."""
-    print(f"DEBUG: Creating new chat session for user: {current_user['uuid']}")
+    print(f"DEBUG: Creating new chat session for user: {get_user_uuid(current_user)}")
     
     session_create = ChatSessionCreate(
-        user_id=current_user['uuid'],
+        user_id=get_user_uuid(current_user),
         title=title or "New Chat",
         is_active=True,
     )
@@ -453,24 +463,23 @@ async def create_new_chat_session(
 
 
 @router.put("/sessions/{session_id}/title")
+@router.patch("/sessions/{session_id}/title")
 async def update_chat_session_title(
     session_id: UUID,
     request: UpdateTitleRequest,
     current_user: Annotated[UserRead, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> ChatSessionRead:
-    """Update the title of a chat session."""
+    """Update the title of a chat session (PUT or PATCH)."""
     print(f"DEBUG: Updating title for session: {session_id}")
-    
     # Verify session belongs to current user
     session = await chat_session.get(db, uuid=session_id)
-    if not session or session.user_id != current_user['uuid']:
+    if not session or session.user_id != get_user_uuid(current_user):
         print(f"ERROR: Chat session not found or unauthorized: {session_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Chat session not found",
         )
-    
     # Update the title
     updated_session = await chat_session.update_title(db, uuid=session_id, title=request.title)
     if not updated_session:
@@ -478,7 +487,6 @@ async def update_chat_session_title(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update session title",
         )
-    
     print(f"DEBUG: Successfully updated session title: {session_id}")
     return updated_session
 
@@ -494,7 +502,7 @@ async def delete_chat_session(
     
     # Verify session belongs to current user
     session = await chat_session.get(db, uuid=session_id)
-    if not session or session.user_id != current_user['uuid']:
+    if not session or session.user_id != get_user_uuid(current_user):
         print(f"ERROR: Chat session not found or unauthorized: {session_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
