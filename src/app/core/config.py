@@ -120,9 +120,13 @@ class CRUDAdminSettings(BaseSettings):
 class AISettings(BaseSettings):
     API_KEY: SecretStr | None = config(
         "AI_API_KEY",
-        cast=SecretStr,
+        cast=lambda v: SecretStr(v.strip()) if v and v.strip() else None,
         # Backward-compat: fallback to legacy API_KEY if present; otherwise None
-        default=config("API_KEY", cast=SecretStr, default=None),
+        default=config(
+            "API_KEY",
+            cast=lambda v: SecretStr(v.strip()) if v and v.strip() else None,
+            default=None,
+        ),
     )
 
 class EnvironmentOption(Enum):
