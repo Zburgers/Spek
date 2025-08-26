@@ -4,6 +4,8 @@ import tempfile
 from unittest.mock import patch
 
 import pytest
+from pydantic import SecretStr
+from src.app.core.config import AISettings
 
 
 class TestAPIKeyConfiguration:
@@ -88,3 +90,30 @@ class TestAPIKeyConfiguration:
             from src.app.core.config import settings
             
             assert settings.API_KEY is None, "No API key set should result in None"
+
+
+class TestCastAPIKeyMethod:
+    """Test the _cast_api_key method directly."""
+    
+    def test_cast_api_key_with_string(self):
+        """Test casting a string value."""
+        result = AISettings._cast_api_key("  test-key  ")
+        assert isinstance(result, SecretStr)
+        assert result.get_secret_value() == "test-key"
+   
+    def test_cast_api_key_with_secret_str(self):
+        """Test casting an already SecretStr value."""
+        secret = SecretStr("  another-key  ")
+        result = AISettings._cast_api_key(secret)
+        assert isinstance(result, SecretStr)
+        assert result.get_secret_value() == "another-key"
+   
+    def test_cast_api_key_with_none(self):
+        """Test casting None value."""
+        result = AISettings._cast_api_key(None)
+        assert result is None
+   
+    def test_cast_api_key_with_empty_string(self):
+        """Test casting empty or whitespace-only string."""
+        result = AISettings._cast_api_key("   ")
+        assert result is None

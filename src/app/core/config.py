@@ -118,13 +118,27 @@ class CRUDAdminSettings(BaseSettings):
 
 
 class AISettings(BaseSettings):
+    @staticmethod
+    def _cast_api_key(v):
+        if v is None:
+            return None
+        if isinstance(v, SecretStr):
+            # Already a SecretStr, extract value before stripping
+            value = v.get_secret_value().strip()
+            return SecretStr(value) if value else None
+        if isinstance(v, str):
+            # String value, strip and convert
+            value = v.strip()
+            return SecretStr(value) if value else None
+        return None
+
     API_KEY: SecretStr | None = config(
         "AI_API_KEY",
-        cast=lambda v: SecretStr(v.strip()) if v and v.strip() else None,
+        cast=_cast_api_key,
         # Backward-compat: fallback to legacy API_KEY if present; otherwise None
         default=config(
             "API_KEY",
-            cast=lambda v: SecretStr(v.strip()) if v and v.strip() else None,
+            cast=_cast_api_key,
             default=None,
         ),
     )

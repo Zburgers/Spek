@@ -71,7 +71,7 @@ def sample_user_data():
 
 @pytest.fixture
 def sample_user_read():
-    """Generate a sample UserRead object."""
+    """Generate a sample UserRead object (public schema without is_superuser)."""
     import uuid
 
     from src.app.schemas.user import UserRead
@@ -83,9 +83,25 @@ def sample_user_read():
         username=fake.user_name(),
         email=fake.email(),
         profile_image_url=fake.image_url(),
+        tier_id=None,
+    )
+
+
+@pytest.fixture
+def sample_user_read_private():
+    """Generate a sample UserReadPrivate object (with is_superuser)."""
+    import uuid
+
+    from src.app.schemas.user import UserReadPrivate
+
+    return UserReadPrivate(
+        id=1,
+        uuid=uuid.uuid4(),
+        name=fake.name(),
+        username=fake.user_name(),
+        email=fake.email(),
+        profile_image_url=fake.image_url(),
         is_superuser=False,
-        created_at=fake.date_time(),
-        updated_at=fake.date_time(),
         tier_id=None,
     )
 
