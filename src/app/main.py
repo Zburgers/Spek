@@ -16,7 +16,7 @@ admin = create_admin_interface()
 
 @asynccontextmanager
 async def lifespan_with_admin(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Custom lifespan that includes admin initialization."""
+    """Custom lifespan that includes admin and RAG initialization."""
     # Get the default lifespan
     default_lifespan = lifespan_factory(settings)
 
@@ -26,6 +26,28 @@ async def lifespan_with_admin(app: FastAPI) -> AsyncGenerator[None, None]:
         if admin:
             # Initialize admin database and setup
             await admin.initialize()
+        
+        # Initialize Pinecone RAG services if API key is available
+        print("🔍 DEBUG: Checking Pinecone initialization...")
+        print(f"🔍 DEBUG: PINECONE_API_KEY exists: {bool(settings.PINECONE_API_KEY)}")
+        if settings.PINECONE_API_KEY:
+            print(f"🔍 DEBUG: API key value (first 10 chars): {settings.PINECONE_API_KEY.get_secret_value()[:10]}...")
+            print(f"🔍 DEBUG: Index name: {settings.PINECONE_INDEX_NAME}")
+            print(f"🔍 DEBUG: Namespace: {settings.PINECONE_NAMESPACE}")
+            try:
+                from .services.vector_store import vector_store_service
+                print("🔍 DEBUG: About to initialize Pinecone client...")
+                vector_store_service.initialize_client(settings.PINECONE_API_KEY.get_secret_value())
+                print("🔍 DEBUG: Pinecone client initialized, now connecting to index...")
+                await vector_store_service.create_index_if_not_exists()
+                print("✅ Pinecone RAG services initialized successfully")
+            except Exception as e:
+                print(f"⚠️ Failed to initialize Pinecone RAG services: {e}")
+                import traceback
+                print("🔍 DEBUG: Full traceback:")
+                traceback.print_exc()
+        else:
+            print("⚠️ DEBUG: PINECONE_API_KEY not found in environment")
 
         yield
 

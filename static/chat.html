@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spek Chat - AI Conversation Platform</title>
     <link rel="stylesheet" href="/static/css/chat-styles.css">
+    <link rel="stylesheet" href="/static/css/document-manager-enhanced.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -46,6 +47,9 @@
                     </div>
                 </div>
                 <div class="header-right">
+                    <button class="header-btn" id="docsMgrBtn" title="Manage Documents">
+                        <i class="fas fa-file-alt"></i>
+                    </button>
                     <button class="header-btn" id="logout-btn" title="Logout">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
@@ -53,25 +57,20 @@
             </header>
 
             <div class="chat-messages" id="chatMessages">
-                <div class="message ai-message">
-                    <div class="message-avatar">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div class="message-content">
-                        <div class="message-text">
-                            Hello! I'm Spek, your AI conversation assistant. How can I help you today?
-                        </div>
-                        <div class="message-time">Just now</div>
-                    </div>
-                </div>
+                <!-- Messages will be dynamically loaded here -->
+            </div>
+
+            <div class="document-chips-container" id="documentChipsContainer">
+                <!-- Document chips will be added here -->
             </div>
 
             <div class="chat-input-area">
                 <form id="chat-form" class="input-container">
                     <div class="input-tools">
-                        <button type="button" class="tool-btn" title="Attach File" id="attachBtn">
+                        <button type="button" class="tool-btn" title="Attach File" id="attachFileBtn">
                             <i class="fas fa-paperclip"></i>
                         </button>
+                        <input type="file" id="chatFileUpload" hidden multiple>
                         <button type="button" class="tool-btn" title="Voice Message" id="voiceBtn">
                             <i class="fas fa-microphone"></i>
                         </button>
@@ -96,7 +95,132 @@
         </main>
     </div>
 
+    <!-- Document Management Modal -->
+    <div class="modal" id="documentsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-folder-open"></i> Document Management</h2>
+                <button class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" data-tab="upload-tab">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    Upload Documents
+                </button>
+                <button class="tab-btn" data-tab="manage-tab">
+                    <i class="fas fa-folder"></i>
+                    Manage Documents
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Upload Tab -->
+                <div class="tab-content">
+                    <div class="tab-pane active" id="upload-tab">
+                        <div class="upload-section">
+                            <div class="upload-area" id="uploadArea">
+                                <div class="upload-content">
+                                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                    <p class="upload-text">Drag & drop files here or click to browse</p>
+                                    <p class="upload-subtext">Supports: PDF, TXT, DOC, DOCX, XLS, PPT (Max: 10MB)</p>
+                                </div>
+                                <input type="file" id="fileInput" accept=".pdf,.txt,.doc,.docx,.xls,.xlsx,.ppt,.pptx" multiple hidden>
+                            </div>
+                            
+                            <div class="document-type-selection">
+                                <label class="type-option">
+                                    <input type="radio" name="documentScope" value="app_wide" checked>
+                                    <span>
+                                        <i class="fas fa-globe"></i>
+                                        App-wide Document
+                                    </span>
+                                </label>
+                                <label class="type-option">
+                                    <input type="radio" name="documentScope" value="chat_specific">
+                                    <span>
+                                        <i class="fas fa-comments"></i>
+                                        Chat-specific Document
+                                    </span>
+                                </label>
+                            </div>
+                            
+                            <button class="btn btn-primary" id="uploadBtn">
+                                <i class="fas fa-upload"></i> Upload Documents
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Manage Tab -->
+                    <div class="tab-pane" id="manage-tab">
+                        <div class="documents-section">
+                            <div class="section-header">
+                                <h3><i class="fas fa-folder-open"></i> Your Documents</h3>
+                                <button class="refresh-btn" id="refreshDocsBtn">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                            
+                            <div class="documents-list" id="documentsList">
+                                <div class="loading" id="documentsLoading">
+                                    <div class="loading-spinner"></div>
+                                    <div>Loading documents...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Details Modal -->
+    <div class="modal" id="documentDetailsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-file"></i> Document Details</h2>
+                <button class="modal-close" id="documentDetailsModalClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div id="documentDetailsContent">
+                    <div class="document-details-grid">
+                        <div class="detail-item">
+                            <label>Name:</label>
+                            <span id="docDetailsTitle">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Size:</label>
+                            <span id="docDetailsSize">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Uploaded:</label>
+                            <span id="docDetailsDate">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Status:</label>
+                            <span id="docDetailsStatus" class="document-status">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Helper Scripts -->
+    <script src="/static/js/helpers/formatting-utils.js"></script>
+    <script src="/static/js/helpers/markdown-utils.js"></script>
+    <script src="/static/js/helpers/app-utils.js"></script>
+    <script src="/static/js/helpers/ui-helpers.js"></script>
+    
+    <!-- Core Application Scripts -->
     <script src="/static/js/main.js"></script>
+    <script src="/static/js/document-manager.js"></script>
     <script src="/static/js/chat.js"></script>
 </body>
 </html>

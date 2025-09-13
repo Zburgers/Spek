@@ -1,15 +1,7 @@
 // Logic for the /login.html page
 document.addEventListener('DOMContentLoaded', () => {
-    // Wait for window.spekApp to be defined before proceeding
-    function waitForSpekApp(callback) {
-        if (window.spekApp) {
-            callback();
-        } else {
-            setTimeout(() => waitForSpekApp(callback), 20);
-        }
-    }
-
-    waitForSpekApp(() => {
+    // Use helper function for waiting for SpekApp
+    window.AppUtils.waitForSpekApp(() => {
         window.spekApp.onReady(() => {
             // Redirect if already logged in
             if (window.spekApp && window.spekApp.isAuthenticated) {
@@ -35,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const params = new URLSearchParams(window.location.search);
         params.set('mode', tab);
-        window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
+        window.AppUtils.updateUrlParameter('mode', tab);
     };
     
     tabBtns.forEach(btn => {
@@ -43,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Initialize tabs based on URL parameter
-    const initialMode = new URLSearchParams(window.location.search).get('mode') || 'login';
+    const initialMode = window.AppUtils.getUrlParameter('mode', 'login');
     switchTab(initialMode);
 
     // Login form submission

@@ -3,8 +3,10 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from ..models.chat import ChatMessage, ChatSession
+from ..models.message_document import MessageDocument
 from ..schemas.chat import ChatMessageCreate, ChatSessionCreate
 
 
@@ -25,8 +27,25 @@ class CRUDChatSession:
         return result.scalar_one_or_none()
 
     async def get_by_user(self, db: AsyncSession, user_id: UUID) -> List[ChatSession]:
+        """
+        Retrieve all active chat sessions for a specific user, ordered by creation date (newest first).
+        
+        Args:
+            db (AsyncSession): Database session for executing queries
+            user_id (UUID): The UUID of the user whose chat sessions to retrieve
+            
+        Returns:
+            List[ChatSession]: List of chat sessions ordered by created_at descending (newest first)
+            
+        Example:
+            >>> sessions = await chat_session.get_by_user(db, user_id=user.uuid)
+            >>> print(f"Found {len(sessions)} sessions for user")
+            >>> # sessions[0] will be the most recently created session
+        """
         result = await db.execute(
-            select(ChatSession).where(ChatSession.user_id == user_id, ChatSession.is_active == True)
+            select(ChatSession)
+            .where(ChatSession.user_id == user_id, ChatSession.is_active == True)
+            .order_by(ChatSession.created_at.desc())
         )
         return result.scalars().all()
 
@@ -73,6 +92,22 @@ class CRUDChatMessage:
             select(ChatMessage).where(ChatMessage.session_id == session_id)
         )
         return len(result.scalars().all())
+
+    async def get_by_session_with_documents(
+        self, db: AsyncSession, *, session_id: UUID
+    ) -> List[ChatMessage]:
+        stmt = (
+            select(ChatMessage)
+            .options(
+                joinedload(ChatMessage.document_associations).joinedload(
+                    MessageDocument.document
+                )
+            )
+            .where(ChatMessage.session_id == session_id)
+            .order_by(ChatMessage.created_at.asc())
+        )
+        result = await db.execute(stmt)
+        return result.unique().scalars().all()
 
 
 chat_session = CRUDChatSession()

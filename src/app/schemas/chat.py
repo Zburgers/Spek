@@ -6,6 +6,19 @@ from pydantic import BaseModel, Field
 
 from ..core.schemas import TimestampSchema, UUIDSchema
 
+class DocumentRead(BaseModel):
+    uuid: UUID
+    filename: str = Field(alias="file_name")
+    file_size: int
+    content_type: str = Field(alias="file_type") 
+    status: str
+    scope: str
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
 
 class ChatMessageBase(BaseModel):
     content: str
@@ -18,6 +31,7 @@ class ChatMessageCreate(ChatMessageBase):
 
 
 class ChatMessageRead(ChatMessageBase, TimestampSchema, UUIDSchema):
+    documents: Optional[List[DocumentRead]] = None
     pass
 
 
@@ -43,6 +57,9 @@ class TextChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
     model: Optional[str] = "gpt-4"
+    selected_document_ids: Optional[List[UUID]] = Field(
+        None, description="List of document UUIDs to use for RAG context"
+    )
 
 
 class TextChatResponse(BaseModel):
@@ -101,11 +118,16 @@ class DocumentUploadRequest(BaseModel):
 
 class DocumentUploadResponse(BaseModel):
     document_id: str
-    file_name: str
-    file_type: str
+    filename: str
     status: str
-    uploaded_at: datetime
+    processing_status: Optional[str] = None
+    scope: str
+    message: str
 
+
+class DocumentStatusUpdate(BaseModel):
+    status: str = Field(description="New status: uploaded, processing, completed, failed")
+    message: Optional[str] = Field(None, description="Optional status message")
 
 class DocumentQueryRequest(BaseModel):
     document_id: str
@@ -133,3 +155,7 @@ class HealthResponse(BaseModel):
     timestamp: datetime
     version: str
     services: dict[str, str]
+
+class MessageDocumentCreate(BaseModel):
+    message_id: int
+    document_id: UUID

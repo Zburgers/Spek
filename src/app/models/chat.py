@@ -22,6 +22,8 @@ class ChatSession(Base):
     # Relationships
     messages: Mapped[list["ChatMessage"]] = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan", init=False)
     user: Mapped["User"] = relationship("User", back_populates="chat_sessions", init=False)
+    documents: Mapped[list["Document"]] = relationship("Document", back_populates="chat_session", init=False)
+    document_associations: Mapped[list["ChatDocument"]] = relationship("ChatDocument", back_populates="chat_session", cascade="all, delete-orphan", init=False)
 
 
 class ChatMessage(Base):
@@ -37,3 +39,9 @@ class ChatMessage(Base):
     
     # Relationships
     session: Mapped["ChatSession"] = relationship("ChatSession", back_populates="messages", init=False)
+    document_associations: Mapped[list["MessageDocument"]] = relationship(
+        "MessageDocument",
+        back_populates="message",
+        cascade="all, delete-orphan",
+        init=False
+    )

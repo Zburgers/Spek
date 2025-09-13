@@ -143,6 +143,26 @@ class AISettings(BaseSettings):
         ),
     )
 
+class RAGSettings(BaseSettings):
+    # Vector Database Settings
+    PINECONE_API_KEY: SecretStr | None = config("PINECONE_API_KEY", cast=SecretStr, default=None)
+    PINECONE_INDEX_NAME: str = config("PINECONE_INDEX_NAME", default="spek-spruce")
+    PINECONE_NAMESPACE: str = config("PINECONE_NAMESPACE", default="default")
+    PINECONE_CLOUD: str = config("PINECONE_CLOUD", default="aws")
+    PINECONE_REGION: str = config("PINECONE_REGION", default="us-east-1")
+    PINECONE_EMBEDDING_MODEL: str = config("PINECONE_EMBEDDING_MODEL", default="llama-text-embed-v2")
+    
+    # Embedding Settings
+    EMBEDDING_MODEL: str = config("EMBEDDING_MODEL", default="placeholder")
+    EMBEDDING_DIMENSION: int = config("EMBEDDING_DIMENSION", default=384)
+    
+    # RAG Pipeline Settings
+    CHUNK_SIZE: int = config("RAG_CHUNK_SIZE", default=1000)
+    CHUNK_OVERLAP: int = config("RAG_CHUNK_OVERLAP", default=200)
+    MAX_CONTEXT_LENGTH: int = config("RAG_MAX_CONTEXT_LENGTH", default=4000)
+    TOP_K_RETRIEVAL: int = config("RAG_TOP_K_RETRIEVAL", default=5)
+
+
 class EnvironmentOption(Enum):
     LOCAL = "local"
     STAGING = "staging"
@@ -166,6 +186,7 @@ class Settings(
     DefaultRateLimitSettings,
     CRUDAdminSettings,
     AISettings,
+    RAGSettings,
     EnvironmentSettings,
 ):
     pass

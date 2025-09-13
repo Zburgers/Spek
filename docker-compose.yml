@@ -10,7 +10,9 @@ services:
     # command: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
     env_file:
       - ./src/.env
-
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     ports:
       - "8000:8000"
     # expose:
@@ -29,6 +31,9 @@ services:
     command: arq app.core.worker.settings.WorkerSettings
     env_file:
       - ./src/.env
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     depends_on:
       - db
       - redis

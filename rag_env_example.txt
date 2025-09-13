@@ -1,0 +1,17 @@
+# RAG Configuration Settings
+# Add these to your .env file to configure the RAG pipeline
+
+# Vector Database (Pinecone) Settings
+PINECONE_API_KEY=your_pinecone_api_key_here
+PINECONE_INDEX_NAME=spek-rag
+PINECONE_NAMESPACE=default
+
+# Embedding Settings  
+EMBEDDING_MODEL=placeholder
+EMBEDDING_DIMENSION=384
+
+# RAG Pipeline Settings
+RAG_CHUNK_SIZE=1000
+RAG_CHUNK_OVERLAP=200
+RAG_MAX_CONTEXT_LENGTH=4000
+RAG_TOP_K_RETRIEVAL=5
