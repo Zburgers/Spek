@@ -151,10 +151,14 @@ class RAGSettings(BaseSettings):
     PINECONE_CLOUD: str = config("PINECONE_CLOUD", default="aws")
     PINECONE_REGION: str = config("PINECONE_REGION", default="us-east-1")
     PINECONE_EMBEDDING_MODEL: str = config("PINECONE_EMBEDDING_MODEL", default="llama-text-embed-v2")
+    # Pinecone Integrated Text Search Controls
+    PINECONE_USE_TEXT_SEARCH: bool = config("PINECONE_USE_TEXT_SEARCH", default=True)
+    PINECONE_REQUIRE_TEXT_APIS: bool = config("PINECONE_REQUIRE_TEXT_APIS", default=True)
+    PINECONE_TEXT_FIELD: str = config("PINECONE_TEXT_FIELD", default="text")
     
     # Embedding Settings
     EMBEDDING_MODEL: str = config("EMBEDDING_MODEL", default="placeholder")
-    EMBEDDING_DIMENSION: int = config("EMBEDDING_DIMENSION", default=384)
+    EMBEDDING_DIMENSION: int = config("EMBEDDING_DIMENSION", default=1024)  # Match Pinecone index dimension
     
     # RAG Pipeline Settings
     CHUNK_SIZE: int = config("RAG_CHUNK_SIZE", default=1000)

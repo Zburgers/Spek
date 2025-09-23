@@ -111,7 +111,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } catch (error) {
                     console.error('Error uploading file:', error);
-                    window.documentManager.showNotification(`Failed to upload ${file.name}`, 'error');
+                    // Provide more specific error messages
+                    let errorMessage = `Failed to upload ${file.name}`;
+                    if (error.message?.includes('size')) {
+                        errorMessage = `${file.name} exceeds maximum file size`;
+                    } else if (error.message?.includes('type')) {
+                        errorMessage = `${file.name} is not a supported file type`;
+                    }
+                    window.documentManager.showNotification(errorMessage, 'error');
                 }
             }
             // Reset file input to allow re-uploading the same file

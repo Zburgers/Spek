@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class EmbeddingService:
     """Service for generating text embeddings."""
     
-    def __init__(self, model_name: str = "placeholder", embedding_dim: int = 384):
+    def __init__(self, model_name: str = "placeholder", embedding_dim: int = 1024):
         """
         Initialize the embedding service.
         
@@ -24,9 +24,11 @@ class EmbeddingService:
             model_name: Name of the embedding model to use
             embedding_dim: Dimension of the embedding vectors
         """
+        if not isinstance(embedding_dim, int) or embedding_dim <= 0:
+            raise ValueError("embedding_dim must be a positive int")
         self.model_name = model_name
         self.embedding_dim = embedding_dim
-        logger.info(f"Initialized EmbeddingService with model: {model_name}")
+        logger.info(f"Initialized EmbeddingService with model: {model_name}, dimension: {embedding_dim}")
     
     async def generate_embedding(self, text: str) -> List[float]:
         """
@@ -105,5 +107,13 @@ class EmbeddingService:
         }
 
 
-# Create service instance
-embedding_service = EmbeddingService()
+# Create service instance with configuration
+def create_embedding_service():
+    """Create embedding service with configuration from settings."""
+    from ..core.config import settings
+    return EmbeddingService(
+        model_name=settings.EMBEDDING_MODEL,
+        embedding_dim=1024  # Match Pinecone index dimension
+    )
+
+embedding_service = create_embedding_service()

@@ -94,7 +94,7 @@ class CRUDChatMessage:
         return len(result.scalars().all())
 
     async def get_by_session_with_documents(
-        self, db: AsyncSession, *, session_id: UUID
+        self, db: AsyncSession, *, session_id: UUID, limit: int = 100
     ) -> List[ChatMessage]:
         stmt = (
             select(ChatMessage)
@@ -105,10 +105,10 @@ class CRUDChatMessage:
             )
             .where(ChatMessage.session_id == session_id)
             .order_by(ChatMessage.created_at.asc())
+            .limit(limit)
         )
         result = await db.execute(stmt)
         return result.unique().scalars().all()
-
 
 chat_session = CRUDChatSession()
 chat_message = CRUDChatMessage()

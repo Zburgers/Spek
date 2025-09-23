@@ -120,15 +120,19 @@ function showNotification(message, type = 'success') {
     
     // Use the existing notification system if available
     if (window.spekApp && window.spekApp.notifications) {
-        if (type === 'error') {
-            window.spekApp.notifications.error(message);
-        } else {
-            window.spekApp.notifications.success(message);
+        const mgr = window.spekApp.notifications;
+        switch (type) {
+            case 'error':
+                return mgr.error(message);
+            case 'info':
+                return mgr.info ? mgr.info(message) : mgr.show(message, 'info');
+            case 'success':
+            default:
+                return mgr.success ? mgr.success(message) : mgr.show(message, 'success');
         }
-    } else {
-        // Fallback to alert
-        alert(`${type.toUpperCase()}: ${message}`);
     }
+    // Fallback to alert
+    alert(`${type.toUpperCase()}: ${message}`);
 }
 
 /**

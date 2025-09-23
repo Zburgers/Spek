@@ -105,40 +105,95 @@ class DocumentManager {
      */
     initializeStatusWebSocket() {
         try {
+            // Clear any existing heartbeat or planned reconnects
+            if (this._wsHeartbeatInterval) {
+                clearInterval(this._wsHeartbeatInterval);
+            }
+            if (this._wsPlannedReconnect) {
+                clearTimeout(this._wsPlannedReconnect);
+            }
+
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/api/v1/documents/status-updates`;
-            
+            const token = (window.spekApp && window.spekApp.getToken) ? window.spekApp.getToken() : localStorage.getItem('access_token');
+            const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
+            const wsUrl = `${protocol}//${window.location.host}/api/v1/documents/status-updates${tokenQuery}`;
+
+            // Exponential backoff state
+            this._wsAttempts = (this._wsAttempts || 0);
+            const backoffBase = 1000; // 1s
+            const maxBackoff = 15000; // 15s
+            const backoff = Math.min(backoffBase * Math.pow(2, this._wsAttempts), maxBackoff) + Math.floor(Math.random() * 300);
+
+            console.log(`📡 Connecting document status WebSocket (attempt ${this._wsAttempts + 1}, backoff ${backoff}ms if needed)...`);
             this.statusWebSocket = new WebSocket(wsUrl);
-            
+
             this.statusWebSocket.onopen = () => {
                 console.log('📡 Document status WebSocket connected');
-                // Send ping to keep connection alive
+                this._wsAttempts = 0; // reset attempts
+                // Initial ping
                 this.statusWebSocket.send('ping');
+                // Heartbeat every 25s
+                this._wsHeartbeatInterval = setInterval(() => {
+                    if (this.statusWebSocket && this.statusWebSocket.readyState === WebSocket.OPEN) {
+                        this.statusWebSocket.send('ping');
+                    }
+                }, 25000);
+                // Re-subscribe to monitored documents
+                this.monitoredDocuments.forEach(docId => {
+                    try { this.statusWebSocket.send(docId); } catch (_) {}
+                });
             };
-            
+
             this.statusWebSocket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+                    if (data.error) {
+                        console.warn('📡 WebSocket error message:', data.error);
+                        if (data.error === 'unauthorized') {
+                            // Stop reconnecting permanently until user re-authenticates
+                            this._wsAuthFailed = true;
+                            this.cleanupWebSocket();
+                            return;
+                        }
+                        return; // ignore other errors for now
+                    }
                     if (data.document_id && data.status) {
                         this.handleStatusUpdate(data);
                     }
                 } catch (error) {
+                    // Non-JSON (e.g., pong)
+                    if (event.data === 'pong') return;
                     console.log('WebSocket message (non-JSON):', event.data);
                 }
             };
-            
-            this.statusWebSocket.onclose = () => {
-                console.log('📡 Document status WebSocket disconnected, attempting to reconnect...');
-                // Attempt to reconnect after 5 seconds
-                setTimeout(() => this.initializeStatusWebSocket(), 5000);
+
+            this.statusWebSocket.onclose = (evt) => {
+                console.log(`📡 Document status WebSocket disconnected (code=${evt.code}).`);
+                this.cleanupWebSocket();
+                if (this._wsAuthFailed) {
+                    console.log('📡 Not reconnecting due to auth failure.');
+                    return;
+                }
+                this._wsAttempts += 1;
+                this._wsPlannedReconnect = setTimeout(() => this.initializeStatusWebSocket(), backoff);
             };
-            
+
             this.statusWebSocket.onerror = (error) => {
                 console.error('📡 WebSocket error:', error);
             };
-            
+
         } catch (error) {
             console.error('Failed to initialize status WebSocket:', error);
+        }
+    }
+
+    cleanupWebSocket() {
+        if (this._wsHeartbeatInterval) {
+            clearInterval(this._wsHeartbeatInterval);
+            this._wsHeartbeatInterval = null;
+        }
+        if (this.statusWebSocket && this.statusWebSocket.readyState !== WebSocket.OPEN) {
+            try { this.statusWebSocket.close(); } catch (_) {}
         }
     }
 

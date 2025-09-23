@@ -3,10 +3,13 @@ from contextlib import _AsyncGeneratorContextManager, asynccontextmanager
 from typing import Any
 
 import anyio
+import asyncio
 import fastapi
 import redis.asyncio as redis
 from arq import create_pool
 from arq.connections import RedisSettings
+import logging
+import time
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
@@ -31,6 +34,31 @@ from .db.database import async_engine as engine
 from .utils import cache, queue
 
 
+logger = logging.getLogger(__name__)
+
+
+async def retry_redis_connection(operation_name: str, operation_func, max_retries: int = 10, initial_delay: float = 1.0):
+    """Retry Redis connection operations with exponential backoff."""
+    delay = initial_delay
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Attempting {operation_name} (attempt {attempt + 1}/{max_retries})")
+            result = await operation_func()
+            logger.info(f"{operation_name} successful")
+            return result
+        except Exception as e:
+            logger.warning(f"{operation_name} failed (attempt {attempt + 1}/{max_retries}): {e}")
+            
+            if attempt == max_retries - 1:
+                logger.error(f"{operation_name} failed after {max_retries} attempts")
+                raise
+            
+            logger.info(f"Retrying {operation_name} in {delay:.1f}s...")
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 10.0)  # Cap at 10 seconds
+
+
 # -------------- database --------------
 async def create_tables() -> None:
     async with engine.begin() as conn:
@@ -39,8 +67,21 @@ async def create_tables() -> None:
 
 # -------------- cache --------------
 async def create_redis_cache_pool() -> None:
-    cache.pool = redis.ConnectionPool.from_url(settings.REDIS_CACHE_URL)
-    cache.client = redis.Redis.from_pool(cache.pool)  # type: ignore
+    async def _create_pool():
+        cache.pool = redis.ConnectionPool.from_url(
+            settings.REDIS_CACHE_URL,
+            socket_connect_timeout=5,
+            retry_on_timeout=True,
+            socket_keepalive=True,
+            socket_keepalive_options={},
+            max_connections=20
+        )
+        cache.client = redis.Redis.from_pool(cache.pool)  # type: ignore
+        # Test the connection
+        await cache.client.ping()
+        return True
+    
+    await retry_redis_connection("Redis cache pool creation", _create_pool)
 
 
 async def close_redis_cache_pool() -> None:
@@ -50,7 +91,17 @@ async def close_redis_cache_pool() -> None:
 
 # -------------- queue --------------
 async def create_redis_queue_pool() -> None:
-    queue.pool = await create_pool(RedisSettings(host=settings.REDIS_QUEUE_HOST, port=settings.REDIS_QUEUE_PORT))
+    async def _create_pool():
+        redis_settings = RedisSettings(
+            host=settings.REDIS_QUEUE_HOST, 
+            port=settings.REDIS_QUEUE_PORT
+        )
+        queue.pool = await create_pool(redis_settings)
+        # Test the connection
+        await queue.pool.ping()
+        return True
+    
+    await retry_redis_connection("Redis queue pool creation", _create_pool)
 
 
 async def close_redis_queue_pool() -> None:
@@ -60,7 +111,14 @@ async def close_redis_queue_pool() -> None:
 
 # -------------- rate limit --------------
 async def create_redis_rate_limit_pool() -> None:
-    rate_limiter.initialize(settings.REDIS_RATE_LIMIT_URL)  # type: ignore
+    async def _create_pool():
+        rate_limiter.initialize(settings.REDIS_RATE_LIMIT_URL)  # type: ignore
+        # Test the connection if the rate limiter has a client
+        if hasattr(rate_limiter, 'client') and rate_limiter.client:
+            await rate_limiter.client.ping()
+        return True
+    
+    await retry_redis_connection("Redis rate limiter pool creation", _create_pool)
 
 
 async def close_redis_rate_limit_pool() -> None:

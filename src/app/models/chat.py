@@ -1,11 +1,17 @@
 import uuid as uuid_pkg
 from datetime import UTC, datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..core.db.database import Base
+
+if TYPE_CHECKING:
+    from .user import User
+    from .document import Document
+    from .chat_document import ChatDocument
+    from .message_document import MessageDocument
 
 
 class ChatSession(Base):

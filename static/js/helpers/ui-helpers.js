@@ -98,27 +98,33 @@ function createDocumentIconsForMessage(documents) {
     container.className = 'message-documents';
 
     documents.forEach(doc => {
-            let fileExtension = 'unknown';
-            if (doc.filename && typeof doc.filename === 'string') {
-                fileExtension = doc.filename.split('.').pop().toLowerCase();
-            } else {
-                console.warn('UIHelpers: Document missing filename property:', doc);
-            }
-            const icon = window.documentManager.getFileIcon(fileExtension);
-        
-            const docCard = document.createElement('div');
-            docCard.className = 'message-document-card';
-        docCard.title = doc.filename;
-        docCard.dataset.docId = doc.uuid || doc.id;
-        
+        // Support both legacy 'filename' and new 'file_name' fields
+        const displayName = doc.filename || doc.file_name || 'Unknown file';
+        let fileExtension = 'unknown';
+
+        if (displayName && typeof displayName === 'string' && displayName.includes('.')) {
+            fileExtension = displayName.split('.').pop().toLowerCase();
+        } else if (doc.file_type && typeof doc.file_type === 'string' && doc.file_type.includes('/')) {
+            // Derive extension from MIME type if filename missing or lacks extension
+            fileExtension = doc.file_type.split('/').pop().toLowerCase();
+        } else if (!doc.filename && !doc.file_name) {
+            console.warn('UIHelpers: Document missing filename/file_name property:', doc);
+        }
+
+        const icon = window.documentManager.getFileIcon(fileExtension);
+        const docCard = document.createElement('div');
+        docCard.className = 'message-document-card';
+        docCard.title = displayName;
+        docCard.dataset.docId = doc.uuid || doc.id || doc.document_id;
+
         docCard.innerHTML = `
             <div class="message-document-icon ${fileExtension}">${icon}</div>
             <div class="message-document-details">
-                <div class="message-document-name">${doc.filename}</div>
+                <div class="message-document-name">${displayName}</div>
                 <div class="message-document-type">${fileExtension.toUpperCase()}</div>
             </div>
         `;
-        
+
         container.appendChild(docCard);
     });
 

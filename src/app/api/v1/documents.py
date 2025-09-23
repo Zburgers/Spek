@@ -2,13 +2,16 @@ from typing import List
 from uuid import UUID
 import json
 import re
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, WebSocket, WebSocketDisconnect, Response
+from fastapi import Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import get_current_user
 from ...core.db.database import async_get_db
 from ...core.utils import queue
+from ...core.security import verify_token, TokenType
 from ...crud.crud_document import document
 from ...services.rag import rag_service
 from ...schemas.chat import (
@@ -18,10 +21,28 @@ from ...schemas.chat import (
     DocumentUploadResponse,
     DocumentStatusUpdate,
     DocumentRead,
+    DocumentStatus,
 )
 from ...schemas.user import UserRead
 
 router = APIRouter(tags=["documents"])
+logger = logging.getLogger(__name__)
+
+# --- Status Normalization Utilities (aligned with chat endpoints) ---
+_LEGACY_STATUS_MAP = {"processed": "completed", "error": "failed"}
+_LEGACY_STATUS_SEEN_DOCS = set()
+
+def normalize_document_status(raw: str) -> DocumentStatus:
+    if raw in _LEGACY_STATUS_MAP:
+        if raw not in _LEGACY_STATUS_SEEN_DOCS:
+            print(f"WARN: (documents) Encountered legacy document status '{raw}', normalizing to '{_LEGACY_STATUS_MAP[raw]}'")
+            _LEGACY_STATUS_SEEN_DOCS.add(raw)
+        raw = _LEGACY_STATUS_MAP[raw]
+    try:
+        return DocumentStatus(raw)  # type: ignore[arg-type]
+    except ValueError:
+        print(f"WARN: (documents) Unknown document status '{raw}', defaulting to 'failed'")
+        return DocumentStatus.failed
 
 def get_user_uuid(user):
     """Helper function to safely extract UUID from user object (Pydantic model or dict)."""
@@ -50,7 +71,7 @@ async def get_document(
         "file_name": db_document.file_name,
         "file_type": db_document.file_type,
         "file_size": db_document.file_size,
-        "status": db_document.status,
+        "status": normalize_document_status(db_document.status),
         "uploaded_at": db_document.created_at,
         "content": db_document.content,  # Base64 encoded content
     }
@@ -65,7 +86,12 @@ async def query_document(
     """Query a document with natural language questions using RAG."""
     
     # Verify document exists and belongs to user
-    db_document = await document.get(db, request.document_id)
+    # Ensure correct UUID type is passed to CRUD layer
+    try:
+        req_uuid = request.document_id if isinstance(request.document_id, UUID) else UUID(str(request.document_id))
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid document_id")
+    db_document = await document.get(db, req_uuid)
     if not db_document or db_document.user_id != get_user_uuid(current_user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -74,10 +100,12 @@ async def query_document(
     
     try:
         # **NEW: Use RAG service for document querying**
+        # Ensure we pass the correct parameter (document_ids) as a list of UUIDs
+        doc_uuid = UUID(str(request.document_id))
         rag_result = await rag_service.retrieve_context(
             query=request.query,
             user_id=get_user_uuid(current_user),
-            document_filter=UUID(request.document_id)  # Filter to specific document
+            document_ids=[doc_uuid]
         )
         
         if rag_result.retrieved_chunks:
@@ -121,28 +149,51 @@ async def delete_document(
     try:
         user_uuid = get_user_uuid(current_user)
         print(f"DEBUG DELETE: Extracted user UUID: {user_uuid}")
-        
+
         db_document = await document.get(db, doc_id)
         print(f"DEBUG DELETE: Document found: {db_document is not None}")
-        
+
         if not db_document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Document not found"
+                detail="Document not found",
             )
-        print(f"DEBUG DELETE: Delete operation completed successfully")
+
+        # Verify ownership
+        if db_document.user_id != user_uuid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to delete this document",
+            )
+
+        # Delete associated vectors from RAG service
+        await rag_service.delete_document_vectors(doc_id)
+        # Invalidate any cached RAG results that could include this document
+        try:
+            rag_service.invalidate_cache_for_document(doc_id, user_id=user_uuid)
+        except Exception as cache_err:
+            # Don't fail deletion if cache invalidation has an issue
+            logger.warning(f"RAG cache invalidation failed for document {doc_id}: {cache_err}")
+
+        # Delete the document from database
+        await document.delete(db, uuid=doc_id)
+
+        print("DEBUG DELETE: Delete operation completed successfully")
         return {"message": "Document deleted successfully", "document_id": str(doc_id)}
-        
+
     except HTTPException:
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
-        print(f"ERROR DELETE: Document deletion failed with exception: {e}")
-        print(f"ERROR DELETE: Exception type: {type(e).__name__}")
-        print(f"ERROR DELETE: Exception args: {e.args}")
-        import traceback
-        print(f"ERROR DELETE: Full traceback: {traceback.format_exc()}")
-        
+        # Structured error logging without full traceback in production
+        logger.error(
+            "Document deletion failed",
+            extra={
+                "event": "document_delete_failure",
+                "error_type": type(e).__name__,
+                "error_args": list(e.args)[:3],  # limit size
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Document deletion failed: {str(e)}",
@@ -315,14 +366,18 @@ async def upload_chat_specific_document(
         }
         new_document = await document.create(db, obj_in=doc_data, user_id=user_uuid)
         try:
-            await queue.pool.enqueue_job("process_document_for_rag", str(new_document.uuid))
+            if queue.pool is not None:
+                await queue.pool.enqueue_job("process_document_for_rag", str(new_document.uuid))
+            else:
+                print("WARNING: ARQ queue pool is not initialized; skipping background processing enqueue")
         except Exception as queue_error:
             print(f"WARNING: Failed to enqueue RAG processing job: {queue_error}")
+        normalized_status = normalize_document_status(new_document.status)
         return DocumentUploadResponse(
             document_id=str(new_document.uuid),
             filename=new_document.file_name,
-            status=new_document.status,
-            processing_status=new_document.status,
+            status=normalized_status,
+            processing_status=normalized_status,
             scope=new_document.scope,
             message=f"Document '{safe_filename}' uploaded successfully for chat and queued for processing"
         )
@@ -364,84 +419,6 @@ async def add_single_document_to_chat(
         )
 
 
-@router.post("/chats/{chat_id}/documents/upload", response_model=DocumentUploadResponse)
-async def upload_chat_specific_document(
-    chat_id: UUID,
-    file: UploadFile = File(...),
-    current_user: UserRead = Depends(get_current_user),
-    db: AsyncSession = Depends(async_get_db),
-):
-    """Upload a document specific to a chat session."""
-    try:
-        # Debug: log incoming request details
-        print(f"DEBUG CHAT UPLOAD: chat_id={chat_id}, user={current_user}")
-        print(f"DEBUG CHAT UPLOAD: file parameter: filename={file.filename}, content_type={file.content_type}")
-        user_uuid = get_user_uuid(current_user)
-        
-        # Validate file
-        if not file.filename:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Filename cannot be empty"
-            )
-        
-        # Sanitize filename: remove/replace potentially problematic characters
-        safe_filename = re.sub(r'[^\w\s\-_\.]', '_', file.filename)
-        safe_filename = re.sub(r'\s+', '_', safe_filename)  # Replace spaces with underscores
-        
-        # Read file content and debug size
-        file_content = await file.read()
-        print(f"DEBUG CHAT UPLOAD: file content size={len(file_content)} bytes")
-        if len(file_content) == 0:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="File cannot be empty"
-            )
-        
-        # Encode binary content to hex string (same as regular upload)
-        content_encoded = file_content.hex()
-        
-        # Create document with chat-specific scope
-        doc_data = {
-            "file_name": safe_filename,
-            "file_type": file.content_type or "application/octet-stream",
-            "file_size": len(file_content),
-            "content": content_encoded,
-            "scope": "chat_specific",
-            "chat_id": chat_id,
-        }
-        
-        # Create document in database
-        new_document = await document.create(db, obj_in=doc_data, user_id=user_uuid)
-        
-        # Queue for RAG processing with properly encoded content
-        try:
-            await queue.pool.enqueue_job(
-                "process_document_for_rag",
-                str(new_document.uuid)
-            )
-        except Exception as queue_error:
-            # Log the error but don't fail the upload
-            print(f"WARNING: Failed to enqueue RAG processing job: {queue_error}")
-        
-        return DocumentUploadResponse(
-            document_id=str(new_document.uuid),
-            filename=new_document.file_name,
-            status=new_document.status,
-            processing_status=new_document.status,
-            scope=new_document.scope,
-            message=f"Document '{safe_filename}' uploaded successfully for chat and queued for processing"
-        )
-    except HTTPException:
-        # Re-raise HTTP exceptions as is
-        raise
-    except Exception as e:
-        print(f"Error uploading chat document: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload chat document: {str(e)}"
-        )
-
 
 @router.delete("/chats/{chat_id}/documents/{document_id}")
 async def remove_document_from_chat(
@@ -461,6 +438,11 @@ async def remove_document_from_chat(
             document_id=document_id,
             user_id=user_uuid
         )
+        # Invalidate any cached RAG results for this user
+        try:
+            rag_service.invalidate_cache_for_user(user_uuid)
+        except Exception as cache_err:
+            logger.warning(f"RAG cache invalidation failed after removing doc from chat: {cache_err}")
         
         return {"message": "Document removed from chat successfully"}
     except Exception as e:
@@ -543,10 +525,10 @@ async def update_document_status(
         
         return DocumentRead(
             uuid=updated_document.uuid,
-            filename=updated_document.file_name,
+            file_name=updated_document.file_name,
             file_size=updated_document.file_size,
-            content_type=updated_document.file_type,
-            status=updated_document.status,
+            file_type=updated_document.file_type,
+            status=normalize_document_status(updated_document.status),
             scope=updated_document.scope,
             created_at=updated_document.created_at,
             updated_at=updated_document.updated_at,
@@ -565,42 +547,118 @@ async def update_document_status(
 @router.websocket("/documents/status-updates")
 async def document_status_websocket(
     websocket: WebSocket,
+    token: str | None = Query(default=None),  # Optional token via query param ?token=
     db: AsyncSession = Depends(async_get_db),
 ):
-    """WebSocket endpoint for real-time document status updates."""
+    """Secure WebSocket for real-time document status updates.
+
+    Authentication:
+        - Accepts JWT access token via query parameter `token` OR `Authorization` header (Bearer).
+        - Verifies token using existing verify_token helper.
+    Authorization:
+        - For each requested document ID, ensures the document belongs to the authenticated user.
+    Messages:
+        - Client may send 'ping' for heartbeat.
+        - Client may send a raw UUID string to request current status snapshot.
+        - Errors returned as JSON: {"error": "message"}.
+    """
+
+    # Attempt to extract token if not provided as query parameter
+    if not token:
+        auth_header = websocket.headers.get("Authorization")
+        if auth_header and auth_header.lower().startswith("bearer "):
+            token = auth_header.split(" ", 1)[1].strip()
+
     await websocket.accept()
-    
+
+    # Verify token
+    user_identifier: str | None = None
+    if token:
+        try:
+            token_data = await verify_token(token, TokenType.ACCESS, db)
+            if token_data:
+                user_identifier = token_data.username_or_email
+        except Exception as e:  # Broad catch to avoid leaking implementation
+            print(f"WebSocket auth verification error: {e}")
+            user_identifier = None
+
+    if not user_identifier:
+        await websocket.send_text(json.dumps({"error": "unauthorized"}))
+        await websocket.close(code=4401)  # 4401 custom code for unauthorized
+        return
+
+    # Resolve user record once (cache) to get uuid for ownership checks
+    from ...crud.crud_users import crud_users  # local import to avoid circular issues
+    try:
+        db_user = await crud_users.get(db=db, email=user_identifier, is_deleted=False) or await crud_users.get(
+            db=db, username=user_identifier, is_deleted=False
+        )
+    except Exception as e:
+        print(f"WebSocket failed to load user for token subject '{user_identifier}': {e}")
+        await websocket.send_text(json.dumps({"error": "unauthorized"}))
+        await websocket.close(code=4401)
+        return
+
+    if not db_user:
+        await websocket.send_text(json.dumps({"error": "unauthorized"}))
+        await websocket.close(code=4401)
+        return
+
+    # Extract user UUID (works if dict or model with attribute)
+    user_uuid = db_user["uuid"] if isinstance(db_user, dict) else getattr(db_user, "uuid", None)
+    if isinstance(user_uuid, str):
+        try:
+            user_uuid = UUID(user_uuid)
+        except ValueError:
+            print("Invalid user UUID format in DB user record")
+            await websocket.send_text(json.dumps({"error": "unauthorized"}))
+            await websocket.close(code=4401)
+            return
+
     try:
         while True:
-            # Wait for messages from client (could be ping or document ID to monitor)
             data = await websocket.receive_text()
-            
+
             if data == "ping":
                 await websocket.send_text("pong")
                 continue
-            
-            # If it's a document ID, start monitoring that document
+
             try:
                 document_id = UUID(data)
-                db_document = await document.get(db, document_id)
-                
-                if db_document:
-                    status_data = {
-                        "document_id": str(db_document.uuid),
-                        "status": db_document.status,
-                        "filename": db_document.file_name,
-                        "scope": db_document.scope,
-                        "updated_at": db_document.updated_at.isoformat() if db_document.updated_at else None
-                    }
-                    await websocket.send_text(json.dumps(status_data))
-                else:
-                    await websocket.send_text(json.dumps({"error": "Document not found"}))
-                    
             except ValueError:
                 await websocket.send_text(json.dumps({"error": "Invalid document ID format"}))
-                
+                continue
+
+            # Fetch document and enforce ownership
+            try:
+                db_document = await document.get(db, document_id)
+            except Exception as fetch_err:
+                print(f"WebSocket document fetch error: {fetch_err}")
+                db_document = None
+
+            if not db_document:
+                await websocket.send_text(json.dumps({"error": "Document not found"}))
+                continue
+
+            if getattr(db_document, "user_id", None) != user_uuid:
+                await websocket.send_text(json.dumps({"error": "Forbidden"}))
+                continue
+
+            status_data = {
+                "document_id": str(db_document.uuid),
+                "status": str(normalize_document_status(db_document.status)),
+                "filename": db_document.file_name,
+                "scope": db_document.scope,
+                "updated_at": db_document.updated_at.isoformat() if db_document.updated_at else None,
+            }
+            await websocket.send_text(json.dumps(status_data))
+
     except WebSocketDisconnect:
         print("Client disconnected from document status WebSocket")
     except Exception as e:
         print(f"WebSocket error: {e}")
+        try:
+            await websocket.send_text(json.dumps({"error": "internal error"}))
+        except Exception:
+            pass
         await websocket.close()

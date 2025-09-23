@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from uuid import UUID
 
 import uvloop
@@ -37,6 +38,7 @@ async def process_document_for_rag(ctx: Worker, document_id: str) -> str:
     document_uuid = UUID(document_id)
     logger = logging.getLogger(__name__)
     logger.info(f"Starting RAG processing for document: {document_uuid}")
+    t0 = time.perf_counter()
     
     try:
         # Get database session (following existing patterns)
@@ -49,6 +51,13 @@ async def process_document_for_rag(ctx: Worker, document_id: str) -> str:
                 raise ValueError(f"Document {document_uuid} not found")
             
             logger.info(f"DEBUG: Found document {document_uuid}, current status: {db_document.status}")
+            logger.info(
+                "DEBUG: Document meta file_name=%s file_type=%s size=%s scope=%s",
+                db_document.file_name,
+                db_document.file_type,
+                db_document.file_size,
+                getattr(db_document, "scope", None),
+            )
             
             # Update status to processing - Fixed method call with keyword arguments
             logger.info(f"DEBUG: About to call document.update_status with args: db={type(db)}, uuid={document_uuid}, status='processing'")
@@ -67,7 +76,7 @@ async def process_document_for_rag(ctx: Worker, document_id: str) -> str:
                     document_id=document_uuid,
                     content=db_document.content,
                     file_type=db_document.file_type,
-                    file_name=db_document.file_name
+                    file_name=db_document.file_name,
                 )
                 
                 if not chunks:
@@ -75,7 +84,9 @@ async def process_document_for_rag(ctx: Worker, document_id: str) -> str:
                     await document.update_status(db, uuid=document_uuid, status="error")
                     return f"No content could be extracted from document {document_uuid}"
                 
-                logger.info(f"DEBUG: Extracted {len(chunks)} chunks from document {document_uuid}")
+                logger.info(
+                    f"DEBUG: Extracted {len(chunks)} chunks from document {document_uuid}; lengths={[len(c.text) for c in chunks[:3]]}"
+                )
                 
                 # Step 3: Prepare vectors for upload (using Pinecone integrated embeddings)
                 # With integrated embedding models, we only need to provide the text
@@ -98,29 +109,23 @@ async def process_document_for_rag(ctx: Worker, document_id: str) -> str:
                 
                 # Step 4: Upload vectors to vector database
                 logger.info(f"DEBUG: Uploading {len(vectors_data)} vectors to vector store")
-                logger.info(f"DEBUG: Vector store client initialized: {vector_store_service.client is not None}")
-                logger.info(f"DEBUG: Vector store index initialized: {vector_store_service.index is not None}")
-                
-                if not vector_store_service.client:
-                    logger.error("DEBUG: Vector store client is None - attempting to initialize...")
-                    # Try to initialize here as fallback
-                    try:
-                        from ...core.config import settings
-                        if settings.PINECONE_API_KEY:
-                            vector_store_service.initialize_client(settings.PINECONE_API_KEY.get_secret_value())
-                            await vector_store_service.create_index_if_not_exists()
-                            logger.info("DEBUG: Successfully initialized vector store in worker")
-                        else:
-                            logger.error("DEBUG: PINECONE_API_KEY not available in worker")
-                    except Exception as init_error:
-                        logger.error(f"DEBUG: Failed to initialize vector store in worker: {init_error}")
-                        
+                logger.info(
+                    f"DEBUG: Vector store client initialized: {vector_store_service.client is not None}; index initialized: {vector_store_service.index is not None}"
+                )
+                try:
+                    await vector_store_service.ensure_ready()
+                except Exception as ensure_err:
+                    logger.error(f"DEBUG: ensure_ready failed: {ensure_err}")
+                    await document.update_status(db, uuid=document_uuid, status="error")
+                    return f"Vector store not ready: {ensure_err}"
+
                 await vector_store_service.upsert_vectors(vectors_data)
                 logger.info(f"DEBUG: Successfully uploaded vectors to vector store")
                 
                 # Step 5: Update document status to processed - Fixed method call
                 await document.update_status(db, uuid=document_uuid, status="processed")
-                logger.info(f"DEBUG: Updated document {document_uuid} status to processed")
+                t1 = time.perf_counter()
+                logger.info(f"DEBUG: Updated document {document_uuid} status to processed in {t1 - t0:.2f}s")
                 
                 result_msg = f"Successfully processed document {document_uuid}: {len(chunks)} chunks with integrated embeddings"
                 logger.info(result_msg)
@@ -140,6 +145,9 @@ async def process_document_for_rag(ctx: Worker, document_id: str) -> str:
         error_msg = f"Failed to process document {document_uuid}: {str(e)}"
         logger.error(error_msg)
         return error_msg
+
+    # Fallback return in case no path above returned (shouldn't normally happen)
+    return f"Processing completed for document {document_uuid}"
 
 
 # -------- base functions --------

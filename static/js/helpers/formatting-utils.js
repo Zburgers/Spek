@@ -39,6 +39,7 @@ function formatFileSize(bytes) {
 function formatDate(dateString) {
     if (!dateString) return 'Unknown';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Unknown';
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 }
 
@@ -159,17 +160,22 @@ function getFileIcon(extension) {
  * getStatusIcon("processing") // "fa-cog fa-spin"
  * getStatusIcon("completed") // "fa-check"
  * getStatusIcon("error") // "fa-exclamation-triangle"
- */
+ **/
+
 function getStatusIcon(status) {
+    // Normalize (coerce null/undefined, trim whitespace, lowercase)
+    const normalized = (status ?? '').toString().trim().toLowerCase();
+    if (!normalized) return 'fa-question';
+
     const iconMap = {
-        'uploaded': 'fa-upload',
-        'processing': 'fa-cog fa-spin',
-        'processed': 'fa-check',
-        'error': 'fa-exclamation-triangle',
-        'failed': 'fa-times'
+        uploaded: 'fa-upload',
+        processing: 'fa-cog fa-spin',
+        processed: 'fa-check',
+        error: 'fa-exclamation-triangle',
+        failed: 'fa-times'
     };
-    
-    return iconMap[status] || 'fa-question';
+
+    return iconMap[normalized] || 'fa-question';
 }
 
 // Export functions to global scope for backward compatibility

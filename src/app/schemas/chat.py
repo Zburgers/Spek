@@ -1,24 +1,38 @@
 from datetime import datetime
 from typing import Any, List, Optional
+from enum import Enum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from ..core.schemas import TimestampSchema, UUIDSchema
 
+class DocumentStatus(str, Enum):
+    """Enumeration of valid document processing statuses.
+
+    Using a str Enum so Pydantic will validate and JSON schemas will list
+    the allowed values explicitly.
+    """
+    uploaded = "uploaded"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"
+    # Legacy statuses kept for backward compatibility with existing DB rows
+    processed = "processed"  # maps logically to 'completed'
+    error = "error"          # maps logically to 'failed'
+
 class DocumentRead(BaseModel):
     uuid: UUID
-    filename: str = Field(alias="file_name")
+    file_name: str
     file_size: int
-    content_type: str = Field(alias="file_type") 
-    status: str
+    file_type: str
+    status: DocumentStatus
     scope: str
     created_at: datetime
     updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
-        populate_by_name = True
 
 class ChatMessageBase(BaseModel):
     content: str
@@ -125,8 +139,11 @@ class DocumentUploadResponse(BaseModel):
     message: str
 
 
+
 class DocumentStatusUpdate(BaseModel):
-    status: str = Field(description="New status: uploaded, processing, completed, failed")
+    status: DocumentStatus = Field(
+        description="New document status (allowed: uploaded, processing, completed, failed)"
+    )
     message: Optional[str] = Field(None, description="Optional status message")
 
 class DocumentQueryRequest(BaseModel):
