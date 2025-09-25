@@ -1,0 +1,79 @@
+/* static/css/notifications.css */
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 350px;
+}
+
+.toast {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease-in-out;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #333;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast.hide {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+.toast-icon {
+    margin-right: 12px;
+    font-size: 20px;
+}
+
+.toast-content {
+    flex-grow: 1;
+}
+
+.toast-dismiss {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 5px;
+    margin-left: 15px;
+}
+
+.toast-dismiss:hover {
+    color: #333;
+}
+
+/* Toast Types */
+.toast-success {
+    background-color: #f0fff4;
+    border-left: 4px solid #48bb78;
+}
+
+.toast-error {
+    background-color: #fff5f5;
+    border-left: 4px solid #f56565;
+}
+
+.toast-info {
+    background-color: #ebf8ff;
+    border-left: 4px solid #4299e1;
+}

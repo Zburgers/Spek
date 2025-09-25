@@ -1,4 +1,103 @@
+/**
+ * @file main.js
+ * @description This is the primary entry point for the Spek application's client-side logic.
+ * It initializes the main application controller (`SpekApp`), handles user authentication,
+ * and provides a centralized API client (`APIClient`) for all backend communication.
+ * This script is shared across all pages of the application.
+ *
+ * @version 1.0.0
+ * @date 2025-09-25
+ */
+
+// ===================================================================================
+//                                  OVERVIEW
+// ===================================================================================
+//
+// The script is structured around two main classes:
+//
+// 1. SpekApp: The core application class. It acts as a singleton controller, managing
+//    the application's state, such as authentication status and the current user. It
+//    also handles the initialization sequence and updates common UI elements (like the navbar).
+//    An instance is exposed globally as `window.spekApp` for easy access from other scripts.
+//
+// 2. APIClient: A dedicated class that abstracts all communication with the backend API.
+//    All HTTP requests should be routed through this client. It handles adding the
+//    authentication token to requests and standardizing error handling.
+//
+// The application initializes when the DOM is fully loaded, ensuring all page elements
+// are available for manipulation.
+//
+// ===================================================================================
+//                               CLASS: SpekApp
+// ===================================================================================
+//
+// Manages the overall state and lifecycle of the front-end application.
+//
+// --- Properties ---
+// - currentUser: (Object|null) Stores the logged-in user's data.
+// - isAuthenticated: (boolean) A flag indicating if a user is currently logged in.
+// - apiClient: (APIClient) An instance of the API client for making server requests.
+// - notifications: (NotificationManager) An instance to handle UI notifications.
+// - pageInitializers: (Array<Function>) A queue for page-specific initialization
+//   functions, which are executed after the main app initialization is complete.
+//
+// --- Key Methods ---
+// - init(): The main initialization method. It checks the user's authentication
+//   status and runs all registered page-specific initializers.
+// - onReady(callback): A public method allowing other scripts (e.g., chat.js, login.js)
+//   to register their own initialization logic. This keeps page-specific code
+//   decoupled from this main file.
+// - checkAuthStatus(): Checks for an auth token in localStorage and validates it with
+//   the server to set the user's session.
+// - updateUIForAuth(): Updates shared UI components, like the navigation bar, to
+//   reflect the current authentication state (e.g., showing "Login" vs. "Logout").
+//
+// ===================================================================================
+//                              CLASS: APIClient
+// ===================================================================================
+//
+// A wrapper for all backend API endpoints. It centralizes request logic,
+// token management, and error handling.
+//
+// --- Core Method ---
+// - request(endpoint, options): The base method for all API calls. It automatically
+//   attaches the JWT token from localStorage to the `Authorization` header.
+//
+// --- Endpoint Groups ---
+// - Authentication: login(), register(), logout().
+// - User: getCurrentUser().
+// - Chat: sendMessage().
+// - Document Management: getDocuments(), uploadDocument(), deleteDocument(), etc. Handles
+//   both general and chat-specific document operations.
+// - Chat-Document Association: Methods to link/unlink documents to a specific chat,
+//   such as `getChatDocuments()` and `associateDocumentsWithChat()`.
+//
+// ===================================================================================
+//                          CONTRIBUTION GUIDELINES ✍️
+// ===================================================================================
+//
+// To maintain code quality and consistency, please follow these simple guidelines:
+//
+// 1.  **Centralize API Calls**: All new interactions with the backend API must be
+//     added as methods within the `APIClient` class. Do not use `fetch()` directly
+//     in page-specific scripts.
+//
+// 2.  **Manage State in SpekApp**: Any global state (e.g., user information,
+//     authentication status) should be managed within the `SpekApp` class.
+//
+// 3.  **Use `onReady` for Page Logic**: For JavaScript that needs to run on a
+//     specific page (e.g., initializing the chat interface on `/chat`), add your
+//     code inside a `window.spekApp.onReady(() => { ... });` block in that page's
+//     specific JS file. This ensures your code runs after the main app is initialized.
+//
+// 4.  **Keep it Clean**: Avoid adding page-specific DOM manipulations or logic directly
+//     into this file. This file is for shared, global functionality only.
+//
+// ===================================================================================
+
 // Main Application Entry Point - Shared across all pages
+import NotificationManager from './notifications.js';
+
 class SpekApp {
     constructor() {
         this.currentUser = null;
@@ -300,7 +399,7 @@ class APIClient {
                 // If detail is an array of validation errors, extract messages
                 if (Array.isArray(errorData.detail)) {
                     errorMessage = errorData.detail
-                        .map(err => err.msg || JSON.stringify(err))
+                        .map(err => err.msg || err.message || 'Validation error')
                         .join('; ');
                 } else if (typeof errorData.detail === 'string') {
                     errorMessage = errorData.detail;
@@ -349,110 +448,6 @@ class APIClient {
                 chat_id: doc.chat_id || null
             }))
         };
-    }
-}
-
-// Simple Notification Manager
-class NotificationManager {
-    constructor() {
-        this.maxToasts = 5;
-        this.defaultDuration = 3500;
-        this.container = document.createElement('div');
-        this.container.className = 'toast-container';
-        this.container.setAttribute('aria-live', 'polite');
-        this.container.setAttribute('aria-atomic', 'true');
-        document.body.appendChild(this.container);
-        this.toasts = new Set();
-    }
-
-    show(message, type = 'info', options = {}) {
-        const { duration = this.defaultDuration, dismissible = true } = options;
-
-        // Trim if exceeding max
-        while (this.container.children.length >= this.maxToasts) {
-            const oldest = this.container.firstElementChild;
-            if (oldest) this._removeToast(oldest);
-        }
-
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.setAttribute('role', 'status');
-
-        const iconMap = {
-            success: '✅',
-            error: '❌',
-            info: 'ℹ️'
-        };
-
-        const icon = document.createElement('span');
-        icon.className = 'toast-icon';
-        icon.textContent = iconMap[type] || 'ℹ️';
-
-        const content = document.createElement('div');
-        content.className = 'toast-content';
-        content.textContent = String(message);
-
-        toast.appendChild(icon);
-        toast.appendChild(content);
-
-        if (dismissible) {
-            const btn = document.createElement('button');
-            btn.className = 'toast-dismiss';
-            btn.setAttribute('aria-label', 'Dismiss notification');
-            btn.innerHTML = '&times;';
-            btn.addEventListener('click', () => this._removeToast(toast));
-            toast.appendChild(btn);
-        }
-
-        // Auto dismiss
-        let timerId = null;
-        const startTimer = () => {
-            if (duration > 0) {
-                timerId = setTimeout(() => this._removeToast(toast), duration);
-            }
-        };
-        const clearTimer = () => {
-            if (timerId) {
-                clearTimeout(timerId);
-                timerId = null;
-            }
-        };
-
-        toast.addEventListener('mouseenter', clearTimer);
-        toast.addEventListener('mouseleave', startTimer);
-
-        this.container.appendChild(toast);
-        // Trigger animation
-        requestAnimationFrame(() => toast.classList.add('show'));
-        startTimer();
-        this.toasts.add(toast);
-        return toast;
-    }
-
-    success(message, options = {}) {
-        return this.show(message, 'success', options);
-    }
-
-    error(message, options = {}) {
-        return this.show(message, 'error', options);
-    }
-
-    info(message, options = {}) {
-        return this.show(message, 'info', options);
-    }
-
-    clearAll() {
-        Array.from(this.toasts).forEach(t => this._removeToast(t));
-    }
-
-    _removeToast(toast) {
-        if (!toast || !toast.parentElement) return;
-        toast.classList.remove('show');
-        toast.classList.add('hide');
-        setTimeout(() => {
-            if (toast.parentElement) toast.parentElement.removeChild(toast);
-            this.toasts.delete(toast);
-        }, 200);
     }
 }
 
