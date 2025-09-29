@@ -6,8 +6,14 @@ import anyio
 import asyncio
 import fastapi
 import redis.asyncio as redis
-from arq import create_pool
-from arq.connections import RedisSettings
+try:
+    from arq import create_pool
+    from arq.connections import RedisSettings
+    ARQ_AVAILABLE = True
+except ImportError:
+    create_pool = None
+    RedisSettings = None
+    ARQ_AVAILABLE = False
 import logging
 import time
 from fastapi import APIRouter, Depends, FastAPI
@@ -91,6 +97,10 @@ async def close_redis_cache_pool() -> None:
 
 # -------------- queue --------------
 async def create_redis_queue_pool() -> None:
+    if not ARQ_AVAILABLE:
+        logger.warning("ARQ not available, skipping Redis queue pool creation")
+        return
+        
     async def _create_pool():
         redis_settings = RedisSettings(
             host=settings.REDIS_QUEUE_HOST, 
