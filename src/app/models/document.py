@@ -16,10 +16,11 @@ class Document(Base):
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_type: Mapped[str] = mapped_column(String(50), nullable=False)
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)  # Base64 encoded content
+    content: Mapped[str] = mapped_column(Text, nullable=False)  # Hex encoded original content
+    processed_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Extracted and cleaned text
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     uuid: Mapped[uuid_pkg.UUID] = mapped_column(default_factory=uuid_pkg.uuid4, primary_key=True, unique=True)
-    status: Mapped[str] = mapped_column(String(20), default="uploaded", nullable=False)  # uploaded, processed, error
+    status: Mapped[str] = mapped_column(String(20), default="uploaded", nullable=False)  # uploaded, processed, error, processing, unsupported
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))
     
     # Relationships

@@ -39,6 +39,23 @@ class CRUDDocument:
             await db.refresh(db_obj)
         return db_obj
 
+    async def update_processed_text(
+        self, 
+        db: AsyncSession, 
+        *, 
+        uuid: UUID, 
+        processed_text: str, 
+        status: str = "processed"
+    ) -> Optional[Document]:
+        """Update the processed text and status for a document."""
+        db_obj = await self.get(db, uuid)
+        if db_obj:
+            db_obj.processed_text = processed_text
+            db_obj.status = status
+            await db.commit()
+            await db.refresh(db_obj)
+        return db_obj
+
     async def delete(self, db: AsyncSession, *, uuid: UUID) -> Optional[Document]:
         db_obj = await self.get(db, uuid)
         if db_obj:
