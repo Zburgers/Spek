@@ -4,7 +4,12 @@ import time
 from uuid import UUID
 
 import uvloop
-from arq.worker import Worker
+try:
+    from arq.worker import Worker
+    ARQ_AVAILABLE = True
+except ImportError:
+    Worker = None
+    ARQ_AVAILABLE = False
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.db.database import async_get_db

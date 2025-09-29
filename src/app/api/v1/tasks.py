@@ -1,6 +1,11 @@
 from typing import Any
 
-from arq.jobs import Job as ArqJob
+try:
+    from arq.jobs import Job as ArqJob
+    ARQ_AVAILABLE = True
+except ImportError:
+    ArqJob = None
+    ARQ_AVAILABLE = False
 from fastapi import APIRouter, Depends, HTTPException
 
 from ...api.dependencies import rate_limiter_dependency

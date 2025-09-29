@@ -1,4 +1,9 @@
-from arq.connections import RedisSettings
+try:
+    from arq.connections import RedisSettings
+    ARQ_AVAILABLE = True
+except ImportError:
+    RedisSettings = None
+    ARQ_AVAILABLE = False
 
 from ...core.config import settings
 from .functions import sample_background_task, process_document_for_rag, shutdown, startup
