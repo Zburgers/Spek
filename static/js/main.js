@@ -60,8 +60,9 @@ class SpekApp {
 
         if (this.isAuthenticated) {
             authButtonsContainer.innerHTML = `
-                <a href="/chat" class="btn btn-primary">Go to Chat</a>
-                <button id="nav-logout-btn" class="btn btn-secondary">Logout</button>
+                <a href="/chat" class="btn btn-secondary">Chat</a>
+                <a href="/documents" class="btn btn-secondary">Documents</a>
+                <button id="nav-logout-btn" class="btn btn-primary">Logout</button>
             `;
             document.getElementById('nav-logout-btn').addEventListener('click', async () => {
                 await this.apiClient.logout();
@@ -153,6 +154,33 @@ class APIClient {
         return this.request('/chat/text', {
             method: 'POST',
             body: JSON.stringify({ message }),
+        });
+    }
+
+    async uploadDocument(formData) {
+        return this.request('/documents/upload', {
+            method: 'POST',
+            body: formData,
+            headers: {}, // Remove Content-Type to let browser set multipart boundary
+        });
+    }
+
+    async listDocuments() {
+        return this.request('/documents');
+    }
+
+    async getDocument(documentId) {
+        return this.request(`/documents/${documentId}`);
+    }
+
+    async queryDocument(documentId, query, sessionId = null) {
+        return this.request('/documents/query', {
+            method: 'POST',
+            body: JSON.stringify({ 
+                document_id: documentId, 
+                query,
+                session_id: sessionId 
+            }),
         });
     }
 }

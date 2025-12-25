@@ -118,6 +118,7 @@ class DocumentQueryResponse(BaseModel):
     source_document: str
     confidence: float
     timestamp: datetime
+    relevant_excerpts: Optional[List[str]] = Field(default=None, description="Relevant text excerpts from the document")
 
 
 class ModelInfo(BaseModel):

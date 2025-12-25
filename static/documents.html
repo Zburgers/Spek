@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documents - Spek</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/documents.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">Spek</a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="chat.html" class="nav-link">Chat</a>
+                <a href="documents.html" class="nav-link active">Documents</a>
+                <button id="nav-logout-btn" class="nav-link logout-btn">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <div class="documents-container">
+            <div class="documents-header">
+                <h1>Document Management</h1>
+                <p>Upload documents and query them with natural language questions.</p>
+            </div>
+
+            <!-- Upload Section -->
+            <section class="upload-section">
+                <h2>Upload Document</h2>
+                <div class="upload-area" id="upload-area">
+                    <input type="file" id="file-input" accept=".txt,.pdf,.docx" style="display: none;">
+                    <div class="upload-prompt">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7,10 12,15 17,10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <p>Click to upload or drag and drop</p>
+                        <small>Supports: PDF, TXT, DOCX files</small>
+                    </div>
+                </div>
+                <div class="upload-progress" id="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <span id="progress-text">Uploading...</span>
+                </div>
+            </section>
+
+            <!-- Documents List -->
+            <section class="documents-section">
+                <h2>Your Documents</h2>
+                <div class="documents-list" id="documents-list">
+                    <div class="loading" id="documents-loading">Loading documents...</div>
+                </div>
+            </section>
+
+            <!-- Query Section -->
+            <section class="query-section" id="query-section" style="display: none;">
+                <h2>Query Document</h2>
+                <div class="selected-document" id="selected-document">
+                    <span id="selected-doc-name">No document selected</span>
+                    <button id="clear-selection" class="btn-secondary">Clear</button>
+                </div>
+                <div class="query-form">
+                    <textarea id="query-input" placeholder="Ask a question about the document..." rows="3"></textarea>
+                    <button id="query-btn" class="btn-primary">Ask Question</button>
+                </div>
+                <div class="query-result" id="query-result" style="display: none;">
+                    <h3>Answer</h3>
+                    <div class="answer-content" id="answer-content"></div>
+                    <div class="answer-metadata">
+                        <div class="confidence-score">
+                            <span>Confidence: </span>
+                            <span id="confidence-value">0%</span>
+                        </div>
+                        <div class="relevant-excerpts" id="relevant-excerpts" style="display: none;">
+                            <h4>Relevant Excerpts</h4>
+                            <div id="excerpts-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="js/main.js"></script>
+    <script src="js/documents.js"></script>
+</body>
+</html>
